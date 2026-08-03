@@ -1,0 +1,80 @@
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Confirm deployment (pushes live code to the server)
+        required: true
+        type: choice
+        default: 'no'
+        options:
+          - 'no'
+          - 'yes'
+
+name: Manual deploy
+
+run-name: deploy main → main environment
+
+# One FTP deploy at a time (parallel runs often cause control-socket timeouts).
+concurrency:
+  group: manual-ftp-main
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm deployment
+        if: github.event.inputs.confirmation != 'yes'
+        run: |
+          echo "::error::Deployment not started. Select yes in the confirmation dropdown."
+          exit 1
+
+  web-deploy:
+    name: deploy main → main environment
+    needs: gate
+    if: github.event.inputs.confirmation == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: main
+    steps:
+      - name: Get latest code on main
+        uses: actions/checkout@v6
+        with:
+          ref: refs/heads/main
+          fetch-depth: 0
+
+      - name: Sync files to main
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          security: loose
+          log-level: verbose
+          # Backend uploads the full app (not dist/ only); allow long transfers (ms).
+          timeout: 900000
+          server-dir: /
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/node_modules/**
+            **/vendor/**
+            **/tests/**
+            **/.idea/**
+            **/.vscode/**
+            **/storage/logs/**
+            **/storage/framework/cache/**
+            **/storage/framework/sessions/**
+            **/storage/framework/views/**
+            **/.env*
+            **/.phpunit.cache/**
+            **/phpunit.xml*
+            **/*.md
+            **/Homestead.*
