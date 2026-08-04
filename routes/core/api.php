@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Core\OutfitController;
 use App\Http\Controllers\Core\WardrobeController;
 use App\Http\Controllers\Core\RoleController;
 use App\Http\Controllers\Core\UserController;
@@ -9,8 +10,15 @@ use Illuminate\Support\Facades\Route;
 use Orion\Facades\Orion;
 
 Route::middleware(['granular.permission:core,core.wardrobe'])->group(function () {
+    Route::get('wardrobes/type-counts', [WardrobeController::class, 'typeCounts']);
     Route::delete('wardrobes/bulk', [WardrobeController::class, 'bulkDestroy']);
     Orion::resource('wardrobes', WardrobeController::class);
+});
+
+Route::middleware(['granular.permission:core,core.outfits'])->group(function () {
+    Route::get('outfits/wardrobe-type-counts', [WardrobeController::class, 'typeCounts']);
+    Route::post('outfits/generate', [OutfitController::class, 'generate']);
+    Route::get('outfits', [OutfitController::class, 'index']);
 });
 
 Route::middleware(['granular.permission:core,core.roles'])->group(function () {

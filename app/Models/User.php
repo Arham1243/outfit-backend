@@ -62,6 +62,11 @@ class User extends Authenticatable
         return $this->profile_image ? asset($this->profile_image) : null;
     }
 
+    public function getFaceImageUrlAttribute()
+    {
+        return $this->face_image ? asset($this->face_image) : null;
+    }
+
     public function preferredLanguage()
     {
         return $this->belongsTo(Language::class, 'preferred_language_id');

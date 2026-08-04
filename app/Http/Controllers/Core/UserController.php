@@ -93,6 +93,7 @@ class UserController extends Controller
     protected function beforeSave(OrionRequest $request, Model $entity)
     {
         $this->handleFile($request, $entity, 'profile_image', 'users/profiles');
+        $this->handleFile($request, $entity, 'face_image', 'users/faces');
         if ($request->filled('role_id')) {
             $role = \App\Models\Core\Role::where('id', $request->role_id)->first();
             if ($role) {

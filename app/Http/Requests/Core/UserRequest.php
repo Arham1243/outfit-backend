@@ -18,6 +18,12 @@ class UserRequest extends Request
         }
 
         PreferredLanguageValidation::mergeUuidToId($this);
+
+        if ($this->has('height') && $this->input('height') !== null && $this->input('height') !== '') {
+            $this->merge([
+                'height' => (int) round((float) $this->input('height')),
+            ]);
+        }
     }
 
     public function commonRules(): array
@@ -41,6 +47,7 @@ class UserRequest extends Request
             'status' => ['nullable', 'string', 'max:50'],
             'gender' => ['nullable', 'string', Rule::in(['male', 'female'])],
             'date_of_birth' => ['nullable', 'date', 'before_or_equal:today'],
+            'height' => ['nullable', 'integer', 'min:50', 'max:300'],
             'role_id' => ['nullable', 'exists:roles,id'],
             'preferred_language_id' => ['nullable', 'integer'],
             'password' => ['nullable', 'string', 'min:8'],

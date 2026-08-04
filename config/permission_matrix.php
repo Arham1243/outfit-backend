@@ -21,6 +21,10 @@ return [
         'core.wardrobe' => [
             'label' => 'menu.wardrobe',
         ],
+        'core.outfits' => [
+            'actions' => ['view', 'create'],
+            'label' => 'menu.outfits',
+        ],
         'core.users' => [
             'actions' => ['view', 'create', 'edit'],
             'label' => 'menu.user_management',
@@ -37,6 +41,7 @@ return [
             'child_indent' => false,
             'entities' => [
                 'core.wardrobe',
+                'core.outfits',
                 'core.users',
                 'core.roles',
             ],

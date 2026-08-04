@@ -103,6 +103,32 @@ class WardrobeController extends Controller
     }
 
     /**
+     * Wardrobe item counts grouped by type for the authenticated user.
+     */
+    public function typeCounts(Request $request)
+    {
+        $rows = Wardrobe::query()
+            ->where('user_id', $request->user()->id)
+            ->selectRaw('type, count(*) as count')
+            ->groupBy('type')
+            ->get();
+
+        $data = [];
+        $total = 0;
+
+        foreach ($rows as $row) {
+            $key = $row->type ?: 'uncategorized';
+            $data[$key] = (int) $row->count;
+            $total += (int) $row->count;
+        }
+
+        return response()->json([
+            'data' => $data,
+            'total' => $total,
+        ]);
+    }
+
+    /**
      * Bulk delete wardrobe images owned by the authenticated user.
      */
     public function bulkDestroy(Request $request)
