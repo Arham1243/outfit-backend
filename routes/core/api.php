@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 use Orion\Facades\Orion;
 
 Route::middleware(['granular.permission:core,core.wardrobe'])->group(function () {
+    Route::delete('wardrobes/bulk', [WardrobeController::class, 'bulkDestroy']);
     Orion::resource('wardrobes', WardrobeController::class);
 });
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Core\Language;
 use App\Models\Core\Role;
+use App\Models\Core\Wardrobe;
 use App\Traits\HasFormattedDates;
 use App\Traits\HasUuid;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -69,6 +70,11 @@ class User extends Authenticatable
     public function role()
     {
         return $this->belongsTo(Role::class);
+    }
+
+    public function wardrobes()
+    {
+        return $this->hasMany(Wardrobe::class);
     }
 
     /**

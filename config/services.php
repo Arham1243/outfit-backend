@@ -16,4 +16,12 @@ return [
         'token' => $sharedCronApiToken,
     ],
 
+    'huggingface' => [
+        'token' => env('HF_API_TOKEN'),
+        'image_classification_url' => env(
+            'HF_IMAGE_CLASSIFICATION_URL',
+            'https://router.huggingface.co/hf-inference/models/google/vit-base-patch16-224'
+        ),
+    ],
+
 ];
