@@ -139,7 +139,7 @@ class OutfitCombinationService
      */
     private function excludeRecentDuplicates(int $userId, array $combinations): array
     {
-        $dedupeDays = max(1, (int) config('services.fashn.dedupe_days', 30));
+        $dedupeDays = max(1, (int) config('outfit_generation.dedupe_days', 30));
         $since = now()->subDays($dedupeDays);
 
         $existingSets = GeneratedOutfit::query()
@@ -171,7 +171,7 @@ class OutfitCombinationService
      */
     private function capByConfidence(array $combinations): array
     {
-        $max = max(1, (int) config('services.fashn.max_combinations', 2));
+        $max = max(1, (int) config('outfit_generation.max_combinations', 2));
 
         usort($combinations, static fn (array $a, array $b) => $b['confidence'] <=> $a['confidence']);
 

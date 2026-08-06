@@ -2,12 +2,16 @@
 
 namespace App\Support;
 
+use App\Services\OutfitGeneration\OutfitGenerationManager;
+
 class BaseModelFingerprint
 {
-    public static function for(?int $height, ?string $gender = null): string
+    public static function for(?int $height, ?string $gender = null, ?string $provider = null): string
     {
-        $version = (string) config('services.fashn.base_model_cache_version', 'v3-generic');
+        $manager = app(OutfitGenerationManager::class);
+        $provider = $provider ?? $manager->defaultDriverName();
+        $version = $manager->baseModelCacheVersion($provider);
 
-        return hash('sha256', $version.'|generic|'.($height ?? '').'|'.($gender ?? ''));
+        return hash('sha256', $provider.'|'.$version.'|generic|'.($height ?? '').'|'.($gender ?? ''));
     }
 }

@@ -2,11 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Contracts\OutfitGeneration\OutfitGenerationProvider;
 use App\Models\Core\GeneratedOutfit;
 use App\Models\Core\Wardrobe;
 use App\Models\User;
-use App\Services\Fashn\FashnClient;
-use App\Services\Fashn\FashnException;
+use App\Services\OutfitGeneration\OutfitGenerationException;
 use App\Support\OutfitRequirements;
 use App\Support\UserUploadPath;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,7 +29,7 @@ class GenerateOutfitJob implements ShouldQueue
 
     public function __construct(public GeneratedOutfit $generatedOutfit) {}
 
-    public function handle(FashnClient $fashnClient): void
+    public function handle(OutfitGenerationProvider $outfitGenerationProvider): void
     {
         $generatedOutfit = $this->generatedOutfit->fresh();
 
@@ -44,13 +44,13 @@ class GenerateOutfitJob implements ShouldQueue
 
         try {
             $user = User::query()->findOrFail($generatedOutfit->user_id);
-            $baseModelImage = $this->resolveBaseModelImage($user, $fashnClient);
+            $baseModelImage = $this->resolveBaseModelImage($user, $outfitGenerationProvider);
             $wardrobeItems = $this->loadOrderedWardrobeItems($generatedOutfit);
 
             $modelImage = $baseModelImage;
 
-            foreach ($wardrobeItems as $index => $wardrobeItem) {
-                $modelImage = $fashnClient->tryOnMax(
+            foreach ($wardrobeItems as $wardrobeItem) {
+                $modelImage = $outfitGenerationProvider->applyGarment(
                     $modelImage,
                     (string) $wardrobeItem->image
                 );
@@ -67,11 +67,8 @@ class GenerateOutfitJob implements ShouldQueue
                 'image' => $relativePath,
                 'error' => null,
             ]);
-        } catch (FashnException $exception) {
-            $this->markFailed($generatedOutfit, $exception->getMessage(), [
-                'error_name' => $exception->getErrorName(),
-                'model_name' => $exception->getModelName(),
-            ]);
+        } catch (OutfitGenerationException $exception) {
+            $this->markFailed($generatedOutfit, $exception->getMessage(), $exception->getContext());
         } catch (Throwable $exception) {
             $this->markFailed($generatedOutfit, $exception->getMessage());
         }
@@ -88,16 +85,16 @@ class GenerateOutfitJob implements ShouldQueue
         $this->markFailed($generatedOutfit, $exception?->getMessage() ?? 'GenerateOutfitJob failed.');
     }
 
-    private function resolveBaseModelImage(User $user, FashnClient $fashnClient): string
+    private function resolveBaseModelImage(User $user, OutfitGenerationProvider $outfitGenerationProvider): string
     {
-        return Cache::lock('outfit-base-model:'.$user->id, 600)->block(120, function () use ($user, $fashnClient) {
+        return Cache::lock('outfit-base-model:'.$user->id, 600)->block(120, function () use ($user, $outfitGenerationProvider) {
             $user->refresh();
 
             if ($user->hasValidBaseModelCache()) {
                 return (string) $user->base_model_image;
             }
 
-            $remoteUrl = $fashnClient->modelCreate(
+            $remoteUrl = $outfitGenerationProvider->createBaseModel(
                 $user->height !== null ? (int) $user->height : null,
                 is_string($user->gender) ? $user->gender : null
             );
@@ -122,7 +119,7 @@ class GenerateOutfitJob implements ShouldQueue
         $ids = $generatedOutfit->wardrobe_ids ?? [];
 
         if (! is_array($ids) || $ids === []) {
-            throw new FashnException('Generated outfit is missing wardrobe items.');
+            throw new OutfitGenerationException('Generated outfit is missing wardrobe items.');
         }
 
         $items = Wardrobe::query()
@@ -131,7 +128,7 @@ class GenerateOutfitJob implements ShouldQueue
             ->get();
 
         if ($items->count() !== count($ids)) {
-            throw new FashnException('One or more wardrobe items could not be found for this outfit.');
+            throw new OutfitGenerationException('One or more wardrobe items could not be found for this outfit.');
         }
 
         return $this->orderForTryOn($items);
@@ -165,7 +162,7 @@ class GenerateOutfitJob implements ShouldQueue
         }
 
         if ($ordered === []) {
-            throw new FashnException('Could not determine try-on order for wardrobe items.');
+            throw new OutfitGenerationException('Could not determine try-on order for wardrobe items.');
         }
 
         return $ordered;
@@ -176,7 +173,7 @@ class GenerateOutfitJob implements ShouldQueue
         $response = Http::timeout(120)->get($url);
 
         if (! $response->successful()) {
-            throw new FashnException(sprintf(
+            throw new OutfitGenerationException(sprintf(
                 'Failed to download generated image (HTTP %d).',
                 $response->status()
             ));
