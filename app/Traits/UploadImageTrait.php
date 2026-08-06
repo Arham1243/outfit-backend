@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 trait UploadImageTrait
 {
-    public function simpleUploadImg($file, string $folder, $previousImage = null)
+    public function simpleUploadImg($file, string $directory, $previousImage = null)
     {
 
         $this->deletePreviousImage($previousImage);
@@ -23,8 +23,8 @@ trait UploadImageTrait
             }
 
             $filename = Str::uuid().'.'.$extension;
-            $folderPath = 'uploads/'.$folder;
-            $filePath = $folderPath.'/'.$filename;
+            $directory = trim($directory, '/');
+            $filePath = $directory.'/'.$filename;
 
             Storage::disk('public')->put($filePath, $file);
 
@@ -33,9 +33,9 @@ trait UploadImageTrait
 
         if ($file instanceof UploadedFile) {
             $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
-            $folderPath = 'uploads/'.$folder;
+            $directory = trim($directory, '/');
 
-            return $file->storeAs($folderPath, $filename, 'public');
+            return $file->storeAs($directory, $filename, 'public');
         }
 
         return null;

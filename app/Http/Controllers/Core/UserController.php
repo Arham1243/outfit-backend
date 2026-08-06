@@ -6,6 +6,7 @@ use App\Http\Requests\Core\UserRequest;
 use App\Http\Resources\Core\UserResource;
 use App\Models\Core\EmailTemplate;
 use App\Models\User;
+use App\Support\UserUploadPath;
 use App\Services\MailService;
 use App\Traits\HandlesBase64Uploads;
 use App\Traits\HandlesFiles;
@@ -92,8 +93,12 @@ class UserController extends Controller
      */
     protected function beforeSave(OrionRequest $request, Model $entity)
     {
-        $this->handleFile($request, $entity, 'profile_image', 'users/profiles');
-        $this->handleFile($request, $entity, 'face_image', 'users/faces');
+        if ($entity instanceof User) {
+            $userUuid = UserUploadPath::ensureUuid($entity);
+            $this->handleFile($request, $entity, 'profile_image', UserUploadPath::profileDir($userUuid));
+        }
+
+        $this->invalidateBaseModelIfProfileChanged($request, $entity);
         if ($request->filled('role_id')) {
             $role = \App\Models\Core\Role::where('id', $request->role_id)->first();
             if ($role) {
@@ -110,6 +115,8 @@ class UserController extends Controller
             $this->assertProfileSelfUpdate($request, $entity);
             $request->replace(collect($request->all())->except(['email'])->all());
         }
+
+        $this->invalidateBaseModelIfProfileChanged($request, $entity);
 
         if ($request->filled('role_id')) {
             $role = \App\Models\Core\Role::where('id', $request->role_id)->first();
@@ -269,5 +276,27 @@ class UserController extends Controller
     protected function afterDestroy($request, $user)
     {
         $this->deleteFile($user->profile_image);
+    }
+
+    protected function invalidateBaseModelIfProfileChanged(OrionRequest $request, Model $entity): void
+    {
+        if (! $entity instanceof User) {
+            return;
+        }
+
+        $heightChanged = $request->has('height')
+            && (int) $request->input('height') !== (int) $entity->getOriginal('height');
+        $genderChanged = $request->has('gender')
+            && $request->input('gender') !== $entity->getOriginal('gender');
+
+        if (! $heightChanged && ! $genderChanged) {
+            return;
+        }
+
+        if ($entity->base_model_image) {
+            $this->deleteFile($entity->base_model_image);
+        }
+
+        $entity->clearBaseModelCache();
     }
 }

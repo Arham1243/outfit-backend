@@ -6,6 +6,7 @@ use App\Http\Requests\Core\WardrobeRequest;
 use App\Http\Resources\Core\WardrobeResource;
 use App\Jobs\ClassifyWardrobeItem;
 use App\Models\Core\Wardrobe;
+use App\Support\UserUploadPath;
 use App\Traits\HandlesFiles;
 use Illuminate\Http\Request;
 use Orion\Concerns\DisableAuthorization;
@@ -77,7 +78,12 @@ class WardrobeController extends Controller
             $wardrobe->user_id = $request->user()->id;
         }
 
-        $this->handleFile($request, $wardrobe, 'image', 'wardrobes/images');
+        $this->handleFile(
+            $request,
+            $wardrobe,
+            'image',
+            UserUploadPath::wardrobeDir((string) $request->user()->uuid)
+        );
     }
 
     /**

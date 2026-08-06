@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Models\Core\GeneratedOutfit;
 use App\Models\Core\Language;
 use App\Models\Core\Role;
 use App\Models\Core\Wardrobe;
+use App\Support\BaseModelFingerprint;
 use App\Traits\HasFormattedDates;
 use App\Traits\HasUuid;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -62,9 +64,27 @@ class User extends Authenticatable
         return $this->profile_image ? asset($this->profile_image) : null;
     }
 
-    public function getFaceImageUrlAttribute()
+    public function getBaseModelImageUrlAttribute(): ?string
     {
-        return $this->face_image ? asset($this->face_image) : null;
+        return $this->base_model_image ? asset($this->base_model_image) : null;
+    }
+
+    public function baseModelFingerprint(): string
+    {
+        return BaseModelFingerprint::for($this->height, $this->gender);
+    }
+
+    public function hasValidBaseModelCache(): bool
+    {
+        return ! empty($this->base_model_image)
+            && ! empty($this->base_model_fingerprint)
+            && $this->base_model_fingerprint === $this->baseModelFingerprint();
+    }
+
+    public function clearBaseModelCache(): void
+    {
+        $this->base_model_image = null;
+        $this->base_model_fingerprint = null;
     }
 
     public function preferredLanguage()
@@ -80,6 +100,11 @@ class User extends Authenticatable
     public function wardrobes()
     {
         return $this->hasMany(Wardrobe::class);
+    }
+
+    public function generatedOutfits()
+    {
+        return $this->hasMany(GeneratedOutfit::class);
     }
 
     /**

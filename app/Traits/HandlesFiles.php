@@ -8,7 +8,7 @@ trait HandlesFiles
 {
     use HandlesBase64Uploads;
 
-    protected function handleFile(Request $request, $model, string $field, string $folder, bool $useOriginalName = false, ?string $originalName = null): void
+    protected function handleFile(Request $request, $model, string $field, string $directory, bool $useOriginalName = false, ?string $originalName = null): void
     {
         if (! $request->has($field)) {
             return;
@@ -27,7 +27,7 @@ trait HandlesFiles
             if ($oldFile) {
                 $this->deleteFile($oldFile);
             }
-            $path = $this->saveBase64File($newFile, $folder, $useOriginalName, $originalName);
+            $path = $this->saveBase64File($newFile, $directory, $useOriginalName, $originalName);
             $model->{$field} = $path;
             $request->merge([$field => $path]);
         } elseif (is_string($newFile) && filter_var($newFile, FILTER_VALIDATE_URL)) {

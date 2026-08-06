@@ -2,25 +2,48 @@
 
 namespace App\Http\Controllers\Core;
 
+use App\Jobs\GenerateOutfitJob;
+use App\Models\Core\GeneratedOutfit;
 use App\Models\Core\Wardrobe;
+use App\Services\OutfitCombinationService;
 use App\Support\OutfitRequirements;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class OutfitController
 {
-    private const DUMMY_TOTAL = 36;
+    public function __construct(
+        private readonly OutfitCombinationService $combinationService,
+    ) {}
 
     /**
-     * Return paginated dummy outfit images for infinite-scroll testing.
+     * Return paginated completed outfit images for infinite scroll.
      */
     public function index(Request $request)
     {
-        return response()->json($this->paginatedOutfits($request));
+        $user = $request->user();
+        $page = max(1, (int) $request->query('page', 1));
+        $limit = max(1, min(60, (int) $request->query('limit', 12)));
+
+        $query = GeneratedOutfit::query()
+            ->where('user_id', $user->id)
+            ->latest('created_at');
+
+        $paginator = $query->paginate($limit, ['*'], 'page', $page);
+
+        return response()->json([
+            'data' => $paginator->getCollection()->map(fn (GeneratedOutfit $outfit) => $this->serializeOutfit($outfit))->values(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
     }
 
     /**
-     * Validate profile + wardrobe, then return the first page of outfits.
+     * Validate profile + wardrobe, enqueue generation jobs, return pending batch.
      */
     public function generate(Request $request)
     {
@@ -32,8 +55,8 @@ class OutfitController
             $errors['height'] = [__('outfit.height_required')];
         }
 
-        if (empty($user->face_image)) {
-            $errors['face_image'] = [__('outfit.face_image_required')];
+        if (! in_array($user->gender, ['male', 'female'], true)) {
+            $errors['gender'] = [__('outfit.gender_required')];
         }
 
         $typeCounts = $this->wardrobeTypeCountsForUser($user->id);
@@ -58,46 +81,135 @@ class OutfitController
                 'errors' => $errors,
                 'meta' => [
                     'missing_wardrobe_groups' => $missingWardrobeGroups,
-                    'requires_settings' => isset($errors['height']) || isset($errors['face_image']),
+                    'requires_settings' => isset($errors['height']) || isset($errors['gender']),
                 ],
             ], 422);
         }
 
-        return response()->json($this->paginatedOutfits($request));
+        $combinations = $this->combinationService->generateForUser($user);
+
+        if ($combinations === []) {
+            $latestBatchId = GeneratedOutfit::query()
+                ->where('user_id', $user->id)
+                ->latest('created_at')
+                ->value('batch_id');
+
+            return response()->json([
+                'message' => __('outfit.no_combinations_available'),
+                'errors' => [
+                    'wardrobe' => [__('outfit.no_combinations_available')],
+                ],
+                'meta' => [
+                    'all_combinations_exhausted' => true,
+                    'latest_batch_id' => $latestBatchId,
+                ],
+            ], 422);
+        }
+
+        $batchId = (string) Str::uuid();
+        $outfits = [];
+
+        foreach ($combinations as $combination) {
+            $outfit = GeneratedOutfit::query()->create([
+                'user_id' => $user->id,
+                'batch_id' => $batchId,
+                'wardrobe_ids' => $combination['wardrobe_ids'],
+                'status' => GeneratedOutfit::STATUS_PENDING,
+            ]);
+
+            GenerateOutfitJob::dispatch($outfit);
+            $outfits[] = $outfit;
+        }
+
+        $total = count($outfits);
+
+        return response()->json([
+            'data' => collect($outfits)->map(fn (GeneratedOutfit $outfit) => $this->serializeOutfit($outfit))->values(),
+            'meta' => [
+                'batch_id' => $batchId,
+                'current_page' => 1,
+                'last_page' => 1,
+                'per_page' => $total,
+                'total' => $total,
+            ],
+        ]);
     }
 
     /**
-     * @return array{data: array<int, array<string, string>>, meta: array<string, int>}
+     * Poll current status for all outfits in a generation batch.
      */
-    private function paginatedOutfits(Request $request): array
+    public function showBatch(Request $request, string $batchId)
     {
-        $page = max(1, (int) $request->query('page', 1));
-        $limit = max(1, min(60, (int) $request->query('limit', 12)));
-        $lastPage = (int) ceil(self::DUMMY_TOTAL / $limit);
-        $page = min($page, max(1, $lastPage));
+        return response()->json($this->batchPayload($request->user()->id, $batchId));
+    }
 
-        $offset = ($page - 1) * $limit;
-        $remaining = self::DUMMY_TOTAL - $offset;
-        $count = min($limit, max(0, $remaining));
+    /**
+     * Return the user's most recent generation batch (any status).
+     */
+    public function latestBatch(Request $request)
+    {
+        $batchId = GeneratedOutfit::query()
+            ->where('user_id', $request->user()->id)
+            ->latest('created_at')
+            ->value('batch_id');
 
-        $imageUrl = asset('assets/images/outfit-example.webp');
-        $data = [];
+        if (! $batchId) {
+            return response()->json([
+                'data' => [],
+                'meta' => [
+                    'batch_id' => null,
+                    'total' => 0,
+                    'completed' => 0,
+                    'failed' => 0,
+                    'pending' => 0,
+                ],
+            ]);
+        }
 
-        for ($i = 0; $i < $count; $i++) {
-            $data[] = [
-                'uuid' => (string) Str::uuid(),
-                'image_url' => $imageUrl,
-            ];
+        return response()->json($this->batchPayload($request->user()->id, $batchId));
+    }
+
+    /**
+     * @return array{data: \Illuminate\Support\Collection, meta: array<string, mixed>}|never
+     */
+    private function batchPayload(int $userId, string $batchId): array
+    {
+        $outfits = GeneratedOutfit::query()
+            ->where('user_id', $userId)
+            ->where('batch_id', $batchId)
+            ->orderBy('id')
+            ->get();
+
+        if ($outfits->isEmpty()) {
+            abort(404, __('outfit.batch_not_found'));
         }
 
         return [
-            'data' => $data,
+            'data' => $outfits->map(fn (GeneratedOutfit $outfit) => $this->serializeOutfit($outfit))->values(),
             'meta' => [
-                'current_page' => $page,
-                'last_page' => $lastPage,
-                'per_page' => $limit,
-                'total' => self::DUMMY_TOTAL,
+                'batch_id' => $batchId,
+                'total' => $outfits->count(),
+                'completed' => $outfits->where('status', GeneratedOutfit::STATUS_COMPLETED)->count(),
+                'failed' => $outfits->where('status', GeneratedOutfit::STATUS_FAILED)->count(),
+                'pending' => $outfits->whereIn('status', [
+                    GeneratedOutfit::STATUS_PENDING,
+                    GeneratedOutfit::STATUS_PROCESSING,
+                ])->count(),
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeOutfit(GeneratedOutfit $outfit): array
+    {
+        return [
+            'uuid' => $outfit->uuid,
+            'status' => $outfit->status,
+            'image_url' => $outfit->image_url,
+            'wardrobe_ids' => $outfit->wardrobe_ids,
+            'error' => $outfit->error,
         ];
     }
 

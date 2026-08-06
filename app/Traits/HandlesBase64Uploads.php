@@ -21,7 +21,7 @@ trait HandlesBase64Uploads
         'image/webp' => 'webp',
     ];
 
-    public function saveBase64File(?string $base64, string $entityFolder = 'other', bool $useOriginalName = false, ?string $originalName = null): ?string
+    public function saveBase64File(?string $base64, string $directory = 'uploads/other', bool $useOriginalName = false, ?string $originalName = null): ?string
     {
         if (! $base64) {
             return null;
@@ -37,22 +37,23 @@ trait HandlesBase64Uploads
 
             $extension = $this->mimeMap[$mimeType] ?? Str::after($mimeType, '/');
             $extension = preg_replace('/[^a-z0-9]/i', '', $extension) ?: 'bin';
+            $directory = trim($directory, '/');
 
             if ($useOriginalName && $originalName) {
                 $name = pathinfo($originalName, PATHINFO_FILENAME);
                 $name = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $name);
-                $fileName = $name . '.' . $extension;
+                $fileName = $name.'.'.$extension;
                 $counter = 1;
 
-                while (Storage::disk('public')->exists('uploads/' . $entityFolder . '/' . $fileName)) {
-                    $fileName = $name . '_' . $counter . '.' . $extension;
+                while (Storage::disk('public')->exists($directory.'/'.$fileName)) {
+                    $fileName = $name.'_'.$counter.'.'.$extension;
                     $counter++;
                 }
             } else {
-                $fileName = Str::uuid() . '.' . $extension;
+                $fileName = Str::uuid().'.'.$extension;
             }
 
-            $path = 'uploads/' . $entityFolder . '/' . $fileName;
+            $path = $directory.'/'.$fileName;
 
             Storage::disk('public')->put($path, $data);
 
