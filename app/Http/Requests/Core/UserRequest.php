@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Core;
 
 use App\Models\User;
+use App\Support\FaceMode;
 use App\Support\PreferredLanguageValidation;
 use Illuminate\Validation\Rule;
 use Orion\Http\Requests\Request;
@@ -25,12 +26,9 @@ class UserRequest extends Request
             ]);
         }
 
-        if ($this->has('use_face_for_outfits')) {
+        if ($this->has('face_mode') && is_string($this->input('face_mode'))) {
             $this->merge([
-                'use_face_for_outfits' => filter_var(
-                    $this->input('use_face_for_outfits'),
-                    FILTER_VALIDATE_BOOLEAN
-                ),
+                'face_mode' => trim($this->input('face_mode')),
             ]);
         }
     }
@@ -38,7 +36,13 @@ class UserRequest extends Request
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            if (! $this->boolean('use_face_for_outfits')) {
+            $mode = $this->input('face_mode');
+
+            if ($mode === null || $mode === '') {
+                return;
+            }
+
+            if (! FaceMode::requiresFaceImage($mode)) {
                 return;
             }
 
@@ -85,7 +89,7 @@ class UserRequest extends Request
             'date_of_birth' => ['nullable', 'date', 'before_or_equal:today'],
             'height' => ['nullable', 'integer', 'min:50', 'max:300'],
             'face_image' => ['nullable', 'string'],
-            'use_face_for_outfits' => ['nullable', 'boolean'],
+            'face_mode' => ['nullable', 'string', Rule::in(FaceMode::all())],
             'role_id' => ['nullable', 'exists:roles,id'],
             'preferred_language_id' => ['nullable', 'integer'],
             'password' => ['nullable', 'string', 'min:8'],

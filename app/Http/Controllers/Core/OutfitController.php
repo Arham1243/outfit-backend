@@ -6,6 +6,7 @@ use App\Jobs\GenerateOutfitJob;
 use App\Models\Core\GeneratedOutfit;
 use App\Models\Core\Wardrobe;
 use App\Services\OutfitCombinationService;
+use App\Support\FaceMode;
 use App\Support\OutfitRequirements;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -59,7 +60,7 @@ class OutfitController
             $errors['gender'] = [__('outfit.gender_required')];
         }
 
-        if ($user->use_face_for_outfits && empty($user->face_image)) {
+        if (FaceMode::requiresFaceImage($user->faceMode()) && empty($user->face_image)) {
             $errors['face_image'] = [__('outfit.face_image_required')];
         }
 
@@ -215,6 +216,8 @@ class OutfitController
             'status' => $outfit->status,
             'image_url' => $outfit->image_url,
             'wardrobe_ids' => $outfit->wardrobe_ids,
+            'generation_provider' => $outfit->generation_provider,
+            'generation_model' => $outfit->generation_model,
             'error' => $outfit->error,
         ];
     }

@@ -296,8 +296,8 @@ class UserController extends Controller
             && (int) $request->input('height') !== (int) $entity->getOriginal('height');
         $genderChanged = $request->has('gender')
             && $request->input('gender') !== $entity->getOriginal('gender');
-        $useFaceChanged = $request->has('use_face_for_outfits')
-            && (bool) $request->boolean('use_face_for_outfits') !== (bool) $entity->getOriginal('use_face_for_outfits');
+        $useFaceChanged = $request->has('face_mode')
+            && $request->input('face_mode') !== $entity->getOriginal('face_mode');
 
         $faceImageChanged = false;
         if ($request->has('face_image')) {

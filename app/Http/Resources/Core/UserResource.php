@@ -28,7 +28,7 @@ class UserResource extends JsonResource
                 : null,
             'profile_image' => $this->profile_image_url,
             'face_image' => $this->face_image_url,
-            'use_face_for_outfits' => (bool) ($this->use_face_for_outfits ?? false),
+            'face_mode' => $this->faceMode(),
             'height' => $this->height,
             'email_verified_at' => $this->email_verified_at?->toIso8601String(),
             'role' => $this->whenLoaded('role', function () {

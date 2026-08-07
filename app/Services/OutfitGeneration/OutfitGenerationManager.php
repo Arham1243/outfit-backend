@@ -2,6 +2,7 @@
 
 namespace App\Services\OutfitGeneration;
 
+use App\Contracts\OutfitGeneration\OutfitCombinationProvider;
 use App\Contracts\OutfitGeneration\OutfitGenerationProvider;
 use Illuminate\Contracts\Container\Container;
 
@@ -52,6 +53,54 @@ class OutfitGenerationManager
                     'Outfit generation provider [%s] must implement %s.',
                     $name,
                     OutfitGenerationProvider::class
+                )
+            );
+        }
+
+        return $provider;
+    }
+
+    public function combinationDriver(?string $name = null): OutfitCombinationProvider
+    {
+        $name = $name ?? (string) config('outfit_generation.default', 'fashn');
+        $providers = config('outfit_generation.providers', []);
+
+        if (! is_array($providers) || ! isset($providers[$name])) {
+            throw new OutfitGenerationException(
+                sprintf('Outfit generation provider [%s] is not configured.', $name)
+            );
+        }
+
+        $config = $providers[$name];
+
+        if (! is_array($config)) {
+            throw new OutfitGenerationException(
+                sprintf('Outfit generation provider [%s] has invalid configuration.', $name)
+            );
+        }
+
+        if (! ($config['enabled'] ?? false)) {
+            throw new OutfitGenerationException(
+                sprintf('Outfit generation provider [%s] is disabled.', $name)
+            );
+        }
+
+        $driverClass = $config['combination_driver'] ?? null;
+
+        if (! is_string($driverClass) || $driverClass === '') {
+            throw new OutfitGenerationException(
+                sprintf('Outfit generation provider [%s] is missing a combination driver class.', $name)
+            );
+        }
+
+        $provider = $this->container->make($driverClass);
+
+        if (! $provider instanceof OutfitCombinationProvider) {
+            throw new OutfitGenerationException(
+                sprintf(
+                    'Outfit generation provider [%s] must implement %s.',
+                    $name,
+                    OutfitCombinationProvider::class
                 )
             );
         }

@@ -1,6 +1,9 @@
 <?php
 
+use App\Services\OutfitGeneration\Providers\FashnCombinationProvider;
 use App\Services\OutfitGeneration\Providers\FashnOutfitGenerationProvider;
+use App\Services\OutfitGeneration\Providers\OpenAiCombinationProvider;
+use App\Services\OutfitGeneration\Providers\OpenAiOutfitGenerationProvider;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,7 +32,15 @@ return [
         'fashn' => [
             'enabled' => filter_var(env('FASHN_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
             'driver' => FashnOutfitGenerationProvider::class,
+            'combination_driver' => FashnCombinationProvider::class,
             'base_model_cache_version' => env('FASHN_BASE_MODEL_CACHE_VERSION', 'v3-generic'),
+        ],
+
+        'openai' => [
+            'enabled' => filter_var(env('OPENAI_OUTFIT_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+            'driver' => OpenAiOutfitGenerationProvider::class,
+            'combination_driver' => OpenAiCombinationProvider::class,
+            'base_model_cache_version' => env('OPENAI_BASE_MODEL_CACHE_VERSION', 'v1'),
         ],
 
     ],

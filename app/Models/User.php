@@ -7,6 +7,7 @@ use App\Models\Core\Language;
 use App\Models\Core\Role;
 use App\Models\Core\Wardrobe;
 use App\Support\BaseModelFingerprint;
+use App\Support\FaceMode;
 use App\Traits\HasFormattedDates;
 use App\Traits\HasUuid;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -27,7 +28,6 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'date_of_birth' => 'date',
         'dark_mode' => 'boolean',
-        'use_face_for_outfits' => 'boolean',
     ];
 
     protected $guarded = ['id', 'created_at', 'updated_at'];
@@ -81,9 +81,21 @@ class User extends Authenticatable
             $this->height,
             $this->gender,
             null,
-            (bool) $this->use_face_for_outfits,
+            $this->faceMode(),
             is_string($this->face_image) ? $this->face_image : null
         );
+    }
+
+    public function faceMode(): string
+    {
+        $mode = is_string($this->face_mode) ? $this->face_mode : FaceMode::AI_MODEL;
+
+        return in_array($mode, FaceMode::all(), true) ? $mode : FaceMode::AI_MODEL;
+    }
+
+    public function usesFaceImage(): bool
+    {
+        return FaceMode::requiresFaceImage($this->faceMode());
     }
 
     public function hasValidBaseModelCache(): bool

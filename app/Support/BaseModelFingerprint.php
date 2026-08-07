@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Services\OutfitGeneration\OutfitGenerationManager;
+use App\Support\FaceMode;
 use Illuminate\Support\Facades\Storage;
 
 class BaseModelFingerprint
@@ -11,14 +12,14 @@ class BaseModelFingerprint
         ?int $height,
         ?string $gender = null,
         ?string $provider = null,
-        bool $useFace = false,
+        ?string $faceMode = null,
         ?string $faceImagePath = null
     ): string {
         $manager = app(OutfitGenerationManager::class);
         $provider = $provider ?? $manager->defaultDriverName();
         $version = $manager->baseModelCacheVersion($provider);
-        $mode = $useFace ? 'face' : 'generic';
-        $faceKey = $useFace ? self::faceContentHash($faceImagePath) : '';
+        $mode = in_array($faceMode, FaceMode::all(), true) ? $faceMode : FaceMode::AI_MODEL;
+        $faceKey = FaceMode::requiresFaceImage($mode) ? self::faceContentHash($faceImagePath) : '';
 
         return hash('sha256', $provider.'|'.$version.'|'.$mode.'|'.$faceKey.'|'.($height ?? '').'|'.($gender ?? ''));
     }

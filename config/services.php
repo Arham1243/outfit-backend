@@ -40,4 +40,14 @@ return [
         'model_create_resolution' => env('FASHN_MODEL_CREATE_RESOLUTION', '2k'),
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
+        'combination_model' => env('OPENAI_COMBINATION_MODEL', 'gpt-5.1'),
+        'image_model' => env('OPENAI_IMAGE_MODEL', 'gpt-image-2'),
+        'image_size' => env('OPENAI_IMAGE_SIZE', '1024x1536'),
+        'image_quality' => env('OPENAI_IMAGE_QUALITY', 'high'),
+        'studio_reference_path' => env('OPENAI_STUDIO_REFERENCE_PATH', 'assets/images/studio_template.jpg'),
+    ],
+
 ];

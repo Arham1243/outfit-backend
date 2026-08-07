@@ -40,6 +40,7 @@ class GenerateOutfitJob implements ShouldQueue
         $generatedOutfit->update([
             'status' => GeneratedOutfit::STATUS_PROCESSING,
             'error' => null,
+            ...$this->generationMetadata($outfitGenerationProvider),
         ]);
 
         try {
@@ -94,14 +95,16 @@ class GenerateOutfitJob implements ShouldQueue
                 return (string) $user->base_model_image;
             }
 
-            $faceImage = ($user->use_face_for_outfits && ! empty($user->face_image))
+            $faceMode = $user->faceMode();
+            $faceImage = $user->usesFaceImage() && ! empty($user->face_image)
                 ? (string) $user->face_image
                 : null;
 
             $remoteUrl = $outfitGenerationProvider->createBaseModel(
                 $user->height !== null ? (int) $user->height : null,
                 is_string($user->gender) ? $user->gender : null,
-                $faceImage
+                $faceImage,
+                $faceMode
             );
 
             $relativePath = UserUploadPath::baseModel((string) $user->uuid);
@@ -185,6 +188,25 @@ class GenerateOutfitJob implements ShouldQueue
         }
 
         Storage::disk('public')->put($relativePath, $response->body());
+    }
+
+    /**
+     * @return array{generation_provider: string, generation_model: string|null}
+     */
+    private function generationMetadata(OutfitGenerationProvider $outfitGenerationProvider): array
+    {
+        $provider = $outfitGenerationProvider->name();
+
+        $model = match ($provider) {
+            'openai' => (string) config('services.openai.image_model', 'gpt-image-2'),
+            'fashn' => 'tryon-max',
+            default => null,
+        };
+
+        return [
+            'generation_provider' => $provider,
+            'generation_model' => $model,
+        ];
     }
 
     /**

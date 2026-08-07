@@ -18,7 +18,7 @@ class FashnOutfitGenerationProvider implements OutfitGenerationProvider
         return 'fashn';
     }
 
-    public function createBaseModel(?int $heightCm, ?string $gender, ?string $faceImage = null): string
+    public function createBaseModel(?int $heightCm, ?string $gender, ?string $faceImage = null, ?string $faceMode = null): string
     {
         return $this->wrap(fn () => $this->fashnClient->modelCreate($heightCm, $gender, $faceImage));
     }
