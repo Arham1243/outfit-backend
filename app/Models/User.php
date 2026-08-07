@@ -27,6 +27,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'date_of_birth' => 'date',
         'dark_mode' => 'boolean',
+        'use_face_for_outfits' => 'boolean',
     ];
 
     protected $guarded = ['id', 'created_at', 'updated_at'];
@@ -59,9 +60,14 @@ class User extends Authenticatable
             }
         });
     }
-       public function getProfileImageUrlAttribute()
+    public function getProfileImageUrlAttribute()
     {
         return $this->profile_image ? asset($this->profile_image) : null;
+    }
+
+    public function getFaceImageUrlAttribute(): ?string
+    {
+        return $this->face_image ? asset($this->face_image) : null;
     }
 
     public function getBaseModelImageUrlAttribute(): ?string
@@ -71,7 +77,13 @@ class User extends Authenticatable
 
     public function baseModelFingerprint(): string
     {
-        return BaseModelFingerprint::for($this->height, $this->gender);
+        return BaseModelFingerprint::for(
+            $this->height,
+            $this->gender,
+            null,
+            (bool) $this->use_face_for_outfits,
+            is_string($this->face_image) ? $this->face_image : null
+        );
     }
 
     public function hasValidBaseModelCache(): bool

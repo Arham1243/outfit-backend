@@ -16,6 +16,11 @@ class UserUploadPath
         return self::root($userUuid).'/profile';
     }
 
+    public static function faceDir(string $userUuid): string
+    {
+        return self::root($userUuid).'/face';
+    }
+
     public static function wardrobeDir(string $userUuid): string
     {
         return self::root($userUuid).'/wardrobe';

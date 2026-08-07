@@ -27,6 +27,8 @@ class UserResource extends JsonResource
                 ? \Illuminate\Support\Carbon::parse($this->date_of_birth)->format('Y-m-d')
                 : null,
             'profile_image' => $this->profile_image_url,
+            'face_image' => $this->face_image_url,
+            'use_face_for_outfits' => (bool) ($this->use_face_for_outfits ?? false),
             'height' => $this->height,
             'email_verified_at' => $this->email_verified_at?->toIso8601String(),
             'role' => $this->whenLoaded('role', function () {

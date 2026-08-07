@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'face_image_required' => 'Upload a face photo when using your face on generated outfits.',
     'gender_required' => 'Gender is required to generate outfits.',
     'generate_failed' => 'Complete your outfit settings and wardrobe before generating.',
     'groups' => [

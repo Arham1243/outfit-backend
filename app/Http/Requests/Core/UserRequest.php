@@ -24,6 +24,42 @@ class UserRequest extends Request
                 'height' => (int) round((float) $this->input('height')),
             ]);
         }
+
+        if ($this->has('use_face_for_outfits')) {
+            $this->merge([
+                'use_face_for_outfits' => filter_var(
+                    $this->input('use_face_for_outfits'),
+                    FILTER_VALIDATE_BOOLEAN
+                ),
+            ]);
+        }
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if (! $this->boolean('use_face_for_outfits')) {
+                return;
+            }
+
+            $hasNewUpload = is_string($this->input('face_image'))
+                && str_starts_with($this->input('face_image'), 'data:');
+
+            if ($hasNewUpload) {
+                return;
+            }
+
+            $routeUser = $this->route('user');
+            $existingFace = $routeUser instanceof User
+                ? $routeUser->face_image
+                : ($routeUser ? User::where('uuid', $routeUser)->value('face_image') : null);
+
+            if (! empty($existingFace)) {
+                return;
+            }
+
+            $validator->errors()->add('face_image', __('outfit.face_image_required'));
+        });
     }
 
     public function commonRules(): array
@@ -48,6 +84,8 @@ class UserRequest extends Request
             'gender' => ['nullable', 'string', Rule::in(['male', 'female'])],
             'date_of_birth' => ['nullable', 'date', 'before_or_equal:today'],
             'height' => ['nullable', 'integer', 'min:50', 'max:300'],
+            'face_image' => ['nullable', 'string'],
+            'use_face_for_outfits' => ['nullable', 'boolean'],
             'role_id' => ['nullable', 'exists:roles,id'],
             'preferred_language_id' => ['nullable', 'integer'],
             'password' => ['nullable', 'string', 'min:8'],

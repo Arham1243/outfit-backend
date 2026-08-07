@@ -96,6 +96,7 @@ class UserController extends Controller
         if ($entity instanceof User) {
             $userUuid = UserUploadPath::ensureUuid($entity);
             $this->handleFile($request, $entity, 'profile_image', UserUploadPath::profileDir($userUuid));
+            $this->handleFile($request, $entity, 'face_image', UserUploadPath::faceDir($userUuid));
         }
 
         $this->invalidateBaseModelIfProfileChanged($request, $entity);
@@ -114,6 +115,12 @@ class UserController extends Controller
         if ($this->isProfileUpdateRequest($request)) {
             $this->assertProfileSelfUpdate($request, $entity);
             $request->replace(collect($request->all())->except(['email'])->all());
+        }
+
+        if ($entity instanceof User) {
+            $userUuid = UserUploadPath::ensureUuid($entity);
+            $this->handleFile($request, $entity, 'profile_image', UserUploadPath::profileDir($userUuid));
+            $this->handleFile($request, $entity, 'face_image', UserUploadPath::faceDir($userUuid));
         }
 
         $this->invalidateBaseModelIfProfileChanged($request, $entity);
@@ -276,6 +283,7 @@ class UserController extends Controller
     protected function afterDestroy($request, $user)
     {
         $this->deleteFile($user->profile_image);
+        $this->deleteFile($user->face_image);
     }
 
     protected function invalidateBaseModelIfProfileChanged(OrionRequest $request, Model $entity): void
@@ -288,8 +296,21 @@ class UserController extends Controller
             && (int) $request->input('height') !== (int) $entity->getOriginal('height');
         $genderChanged = $request->has('gender')
             && $request->input('gender') !== $entity->getOriginal('gender');
+        $useFaceChanged = $request->has('use_face_for_outfits')
+            && (bool) $request->boolean('use_face_for_outfits') !== (bool) $entity->getOriginal('use_face_for_outfits');
 
-        if (! $heightChanged && ! $genderChanged) {
+        $faceImageChanged = false;
+        if ($request->has('face_image')) {
+            $newFace = $request->input('face_image');
+
+            if ($newFace === null) {
+                $faceImageChanged = ! empty($entity->getOriginal('face_image'));
+            } elseif (is_string($newFace) && str_starts_with($newFace, 'data:')) {
+                $faceImageChanged = true;
+            }
+        }
+
+        if (! $heightChanged && ! $genderChanged && ! $useFaceChanged && ! $faceImageChanged) {
             return;
         }
 

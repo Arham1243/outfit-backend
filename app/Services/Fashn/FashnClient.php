@@ -17,7 +17,7 @@ class FashnClient
     /**
      * @throws FashnException
      */
-    public function modelCreate(?int $heightCm = null, ?string $gender = null): string
+    public function modelCreate(?int $heightCm = null, ?string $gender = null, ?string $faceReference = null): string
     {
         $inputs = [
             'prompt' => $this->buildModelCreatePrompt($heightCm, $gender),
@@ -26,6 +26,14 @@ class FashnClient
             'resolution' => config('services.fashn.model_create_resolution', '2k'),
             'generation_mode' => config('services.fashn.model_create_generation_mode', 'balanced'),
         ];
+
+        if ($faceReference !== null && $faceReference !== '') {
+            $inputs['face_reference'] = $this->resolveImageInput($faceReference);
+            $inputs['face_reference_mode'] = config(
+                'services.fashn.face_reference_mode',
+                'match_reference'
+            );
+        }
 
         return $this->extractImageUrl(
             $this->runAndWait('model-create', $inputs),

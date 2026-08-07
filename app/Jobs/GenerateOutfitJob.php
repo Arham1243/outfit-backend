@@ -94,9 +94,14 @@ class GenerateOutfitJob implements ShouldQueue
                 return (string) $user->base_model_image;
             }
 
+            $faceImage = ($user->use_face_for_outfits && ! empty($user->face_image))
+                ? (string) $user->face_image
+                : null;
+
             $remoteUrl = $outfitGenerationProvider->createBaseModel(
                 $user->height !== null ? (int) $user->height : null,
-                is_string($user->gender) ? $user->gender : null
+                is_string($user->gender) ? $user->gender : null,
+                $faceImage
             );
 
             $relativePath = UserUploadPath::baseModel((string) $user->uuid);

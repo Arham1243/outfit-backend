@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'face_image_required' => 'Téléversez une photo de visage pour utiliser votre visage sur les tenues générées.',
     'gender_required' => 'Le genre est requis pour générer des tenues.',
     'generate_failed' => 'Complétez vos paramètres de tenue et votre garde-robe avant de générer.',
     'groups' => [

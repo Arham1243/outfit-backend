@@ -59,6 +59,10 @@ class OutfitController
             $errors['gender'] = [__('outfit.gender_required')];
         }
 
+        if ($user->use_face_for_outfits && empty($user->face_image)) {
+            $errors['face_image'] = [__('outfit.face_image_required')];
+        }
+
         $typeCounts = $this->wardrobeTypeCountsForUser($user->id);
         $missingWardrobeGroups = OutfitRequirements::missingGroups($typeCounts);
 
@@ -81,7 +85,9 @@ class OutfitController
                 'errors' => $errors,
                 'meta' => [
                     'missing_wardrobe_groups' => $missingWardrobeGroups,
-                    'requires_settings' => isset($errors['height']) || isset($errors['gender']),
+                    'requires_settings' => isset($errors['height'])
+                        || isset($errors['gender'])
+                        || isset($errors['face_image']),
                 ],
             ], 422);
         }

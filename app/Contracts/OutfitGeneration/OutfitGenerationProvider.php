@@ -9,7 +9,7 @@ interface OutfitGenerationProvider
     /**
      * @throws \App\Services\OutfitGeneration\OutfitGenerationException
      */
-    public function createBaseModel(?int $heightCm, ?string $gender): string;
+    public function createBaseModel(?int $heightCm, ?string $gender, ?string $faceImage = null): string;
 
     /**
      * Apply a wardrobe garment onto the model image.
