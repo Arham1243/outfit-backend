@@ -18,6 +18,38 @@ class OpenAiOutfitGenerationProvider implements OutfitGenerationProvider
         return 'openai';
     }
 
+    /**
+     * Single-pass outfit generation: face/body reference + all garments in one API call.
+     * Avoids sequential edits that degrade face quality and litter tmp files.
+     *
+     * @param  list<string>  $garmentImages
+     *
+     * @throws OutfitGenerationException
+     */
+    public function generateFullOutfit(
+        ?int $heightCm,
+        ?string $gender,
+        ?string $faceImage,
+        ?string $faceMode,
+        array $garmentImages,
+        string $outputRelativePath,
+    ): string {
+        if ($garmentImages === []) {
+            throw new OutfitGenerationException('At least one garment image is required.');
+        }
+
+        $mode = $this->normalizeFaceMode($faceMode);
+        $references = $this->buildOutfitReferences($mode, $faceImage, $garmentImages);
+        $prompt = $this->buildFullOutfitPrompt($heightCm, $gender, $mode, count($references), count($garmentImages));
+
+        return $this->wrap(fn () => $this->openAiClient->editImage(
+            $references,
+            $prompt,
+            [],
+            $outputRelativePath
+        ));
+    }
+
     public function createBaseModel(?int $heightCm, ?string $gender, ?string $faceImage = null, ?string $faceMode = null): string
     {
         $mode = $this->normalizeFaceMode($faceMode);
@@ -34,20 +66,73 @@ class OpenAiOutfitGenerationProvider implements OutfitGenerationProvider
 
     public function applyGarment(string $modelImage, string $productImage): string
     {
-        $references = [
-            $this->openAiClient->resolveStudioReferenceAbsolutePath(),
-            $modelImage,
-            $productImage,
-        ];
+        $references = [$modelImage, $productImage];
 
-        $prompt = 'Image 1 is the studio pose, lighting, framing, and white background reference only. '
-            .'Image 2 is the current full-body model photo. Preserve the exact face, body proportions, pose, and identity from Image 2. '
-            .'Image 3 is the garment product photo. '
-            .'Apply the garment shown in Image 3 onto the person in Image 2. '
-            .'Match Image 1\'s studio lighting and background. Do not change the person\'s face. '
-            .'Full body, standing, relaxed pose.';
+        $prompt = 'Image 1 is the current full-body model photo — preserve this person\'s exact face, body, pose, and identity. '
+            .'Image 2 is a garment product photo. Apply the garment from Image 2 onto the person in Image 1. '
+            .'Plain white studio background, professional fashion photography, photorealistic, no facial artifacts.';
 
         return $this->wrap(fn () => $this->openAiClient->editImage($references, $prompt));
+    }
+
+    /**
+     * @param  list<string>  $garmentImages
+     * @return list<string>
+     */
+    private function buildOutfitReferences(string $faceMode, ?string $faceImage, array $garmentImages): array
+    {
+        $references = [];
+
+        if ($faceMode === 'ai_model') {
+            $references[] = $this->openAiClient->resolveStudioReferenceAbsolutePath();
+        } elseif ($this->faceModeUsesReference($faceMode) && $faceImage !== null && $faceImage !== '') {
+            $references[] = $faceImage;
+        }
+
+        foreach ($garmentImages as $garmentImage) {
+            $references[] = $garmentImage;
+        }
+
+        return $references;
+    }
+
+    private function buildFullOutfitPrompt(
+        ?int $heightCm,
+        ?string $gender,
+        string $faceMode,
+        int $referenceCount,
+        int $garmentCount,
+    ): string {
+        $heightText = ($heightCm !== null && $heightCm > 0)
+            ? sprintf('approximately %d cm tall', $heightCm)
+            : 'natural height';
+
+        $genderText = match ($gender) {
+            'female' => 'woman',
+            'male' => 'man',
+            default => 'person',
+        };
+
+        $garmentStart = $faceMode === 'ai_model' ? 2 : 1;
+        $garmentEnd = $referenceCount;
+        $garmentRange = $garmentCount === 1
+            ? "Image {$garmentStart}"
+            : "Images {$garmentStart} through {$garmentEnd}";
+
+        $base = "Create a professional full-body studio fashion photograph on a plain white background. "
+            ."The person should be {$heightText}, {$genderText}, standing in a relaxed front-facing pose. "
+            ."{$garmentRange} ".'show the clothing items to wear together. '
+            .'Photorealistic, clean, high-quality fashion photo with even studio lighting. No text, logos, or watermarks. ';
+
+        return match ($faceMode) {
+            'user_face' => $base
+                .'Image 1 is the face reference — use this person\'s exact face, including glasses, facial hair, skin tone, and all facial features. '
+                .'Fit the clothing naturally to their body proportions. Do not distort or add artifacts to the face.',
+            'user_body_ai_face' => $base
+                .'Image 1 is a body proportion reference only — match the build and height, but generate a different realistic face.',
+            default => $base
+                .'Image 1 is a studio pose and framing reference. Generate a realistic generic fashion model wearing all garments.',
+        };
     }
 
     private function normalizeFaceMode(?string $faceMode): string

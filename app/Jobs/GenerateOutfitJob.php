@@ -7,6 +7,7 @@ use App\Models\Core\GeneratedOutfit;
 use App\Models\Core\Wardrobe;
 use App\Models\User;
 use App\Services\OutfitGeneration\OutfitGenerationException;
+use App\Services\OutfitGeneration\Providers\OpenAiOutfitGenerationProvider;
 use App\Support\OutfitRequirements;
 use App\Support\UserUploadPath;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -45,23 +46,44 @@ class GenerateOutfitJob implements ShouldQueue
 
         try {
             $user = User::query()->findOrFail($generatedOutfit->user_id);
-            $baseModelImage = $this->resolveBaseModelImage($user, $outfitGenerationProvider);
             $wardrobeItems = $this->loadOrderedWardrobeItems($generatedOutfit);
-
-            $modelImage = $baseModelImage;
-
-            foreach ($wardrobeItems as $wardrobeItem) {
-                $modelImage = $outfitGenerationProvider->applyGarment(
-                    $modelImage,
-                    (string) $wardrobeItem->image
-                );
-            }
-
             $relativePath = UserUploadPath::generatedOutfit(
                 (string) $user->uuid,
                 (string) $generatedOutfit->uuid
             );
-            $this->persistRemoteImage($modelImage, $relativePath);
+
+            if ($outfitGenerationProvider instanceof OpenAiOutfitGenerationProvider) {
+                $faceMode = $user->faceMode();
+                $faceImage = $user->usesFaceImage() && ! empty($user->face_image)
+                    ? (string) $user->face_image
+                    : null;
+
+                $garmentImages = array_map(
+                    static fn (Wardrobe $item) => (string) $item->image,
+                    $wardrobeItems
+                );
+
+                $outfitGenerationProvider->generateFullOutfit(
+                    $user->height !== null ? (int) $user->height : null,
+                    is_string($user->gender) ? $user->gender : null,
+                    $faceImage,
+                    $faceMode,
+                    $garmentImages,
+                    $relativePath
+                );
+            } else {
+                $baseModelImage = $this->resolveBaseModelImage($user, $outfitGenerationProvider);
+                $modelImage = $baseModelImage;
+
+                foreach ($wardrobeItems as $wardrobeItem) {
+                    $modelImage = $outfitGenerationProvider->applyGarment(
+                        $modelImage,
+                        (string) $wardrobeItem->image
+                    );
+                }
+
+                $this->persistRemoteImage($modelImage, $relativePath);
+            }
 
             $generatedOutfit->update([
                 'status' => GeneratedOutfit::STATUS_COMPLETED,

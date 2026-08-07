@@ -20,7 +20,7 @@ class OpenAiClient
      *
      * @throws OpenAiException
      */
-    public function editImage(array $referenceImages, string $prompt, array $options = []): string
+    public function editImage(array $referenceImages, string $prompt, array $options = [], ?string $storeRelativePath = null): string
     {
         if ($referenceImages === []) {
             throw new OpenAiException('OpenAI image edit requires at least one reference image.', '/images/edits');
@@ -49,7 +49,7 @@ class OpenAiClient
             'n' => 1,
         ]);
 
-        return $this->persistImageResponse($response, '/images/edits');
+        return $this->persistImageResponse($response, '/images/edits', $storeRelativePath);
     }
 
     /**
@@ -231,7 +231,7 @@ class OpenAiClient
     /**
      * @throws OpenAiException
      */
-    private function persistImageResponse(Response $response, string $endpoint): string
+    private function persistImageResponse(Response $response, string $endpoint, ?string $storeRelativePath = null): string
     {
         if (! $response->successful()) {
             throw OpenAiException::fromResponse($response->status(), $response->json(), $endpoint);
@@ -244,7 +244,7 @@ class OpenAiClient
             throw new OpenAiException('OpenAI image response did not include image data.', $endpoint);
         }
 
-        $relativePath = 'tmp/openai/'.Str::uuid().'.jpg';
+        $relativePath = $storeRelativePath ?? ('tmp/openai/'.Str::uuid().'.jpg');
         $disk = Storage::disk('public');
 
         if (isset($data['b64_json']) && is_string($data['b64_json'])) {

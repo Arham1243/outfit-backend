@@ -13,11 +13,11 @@ class OutfitGenerationServiceProvider extends ServiceProvider
     {
         $this->app->singleton(OutfitGenerationManager::class);
 
-        $this->app->singleton(OutfitGenerationProvider::class, function ($app) {
+        $this->app->bind(OutfitGenerationProvider::class, function ($app) {
             return $app->make(OutfitGenerationManager::class)->driver();
         });
 
-        $this->app->singleton(OutfitCombinationProvider::class, function ($app) {
+        $this->app->bind(OutfitCombinationProvider::class, function ($app) {
             return $app->make(OutfitGenerationManager::class)->combinationDriver();
         });
     }
