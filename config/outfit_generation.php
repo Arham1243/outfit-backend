@@ -33,14 +33,14 @@ return [
             'enabled' => filter_var(env('FASHN_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
             'driver' => FashnOutfitGenerationProvider::class,
             'combination_driver' => FashnCombinationProvider::class,
-            'base_model_cache_version' => env('FASHN_BASE_MODEL_CACHE_VERSION', 'v3-generic'),
+            'base_model_cache_version' => env('FASHN_BASE_MODEL_CACHE_VERSION', 'v4-ai-face-isolation'),
         ],
 
         'openai' => [
             'enabled' => filter_var(env('OPENAI_OUTFIT_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
             'driver' => OpenAiOutfitGenerationProvider::class,
             'combination_driver' => OpenAiCombinationProvider::class,
-            'base_model_cache_version' => env('OPENAI_BASE_MODEL_CACHE_VERSION', 'v1'),
+            'base_model_cache_version' => env('OPENAI_BASE_MODEL_CACHE_VERSION', 'v2-ai-face-isolation'),
         ],
 
     ],

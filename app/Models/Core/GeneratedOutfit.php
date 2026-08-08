@@ -23,6 +23,7 @@ class GeneratedOutfit extends Model
 
     protected $casts = [
         'wardrobe_ids' => 'array',
+        'generation_settings' => 'array',
     ];
 
     protected $appends = ['image_url'];

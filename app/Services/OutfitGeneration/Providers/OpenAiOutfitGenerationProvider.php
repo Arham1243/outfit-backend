@@ -131,7 +131,8 @@ class OpenAiOutfitGenerationProvider implements OutfitGenerationProvider
             'user_body_ai_face' => $base
                 .'Image 1 is a body proportion reference only — match the build and height, but generate a different realistic face.',
             default => $base
-                .'Image 1 is a studio pose and framing reference. Generate a realistic generic fashion model wearing all garments.',
+                .'Image 1 is a studio pose and framing reference only — do not copy any person from it. '
+                .'Generate a realistic generic fashion model with a new anonymous human face wearing all garments.',
         };
     }
 
@@ -182,6 +183,7 @@ class OpenAiOutfitGenerationProvider implements OutfitGenerationProvider
             ),
             default => sprintf(
                 '%s Generate a professional full-body studio fashion photograph with a realistic generic %s and %s. '
+                .'Use a new anonymous human face — do not copy any user face reference. '
                 .'Plain white studio background, full body, standing, relaxed pose.',
                 $studioRef,
                 $genderText,

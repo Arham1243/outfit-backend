@@ -8,6 +8,7 @@ use App\Models\Core\Wardrobe;
 use App\Models\User;
 use App\Services\OutfitGeneration\OutfitGenerationException;
 use App\Services\OutfitGeneration\Providers\OpenAiOutfitGenerationProvider;
+use App\Support\GenerationSettingsSnapshot;
 use App\Support\OutfitRequirements;
 use App\Support\UserUploadPath;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -46,6 +47,11 @@ class GenerateOutfitJob implements ShouldQueue
 
         try {
             $user = User::query()->findOrFail($generatedOutfit->user_id);
+
+            $generatedOutfit->update([
+                'generation_settings' => GenerationSettingsSnapshot::for($user),
+            ]);
+
             $wardrobeItems = $this->loadOrderedWardrobeItems($generatedOutfit);
             $relativePath = UserUploadPath::generatedOutfit(
                 (string) $user->uuid,
@@ -54,9 +60,7 @@ class GenerateOutfitJob implements ShouldQueue
 
             if ($outfitGenerationProvider instanceof OpenAiOutfitGenerationProvider) {
                 $faceMode = $user->faceMode();
-                $faceImage = $user->usesFaceImage() && ! empty($user->face_image)
-                    ? (string) $user->face_image
-                    : null;
+                $faceImage = $user->faceImageForGeneration();
 
                 $garmentImages = array_map(
                     static fn (Wardrobe $item) => (string) $item->image,
@@ -118,9 +122,7 @@ class GenerateOutfitJob implements ShouldQueue
             }
 
             $faceMode = $user->faceMode();
-            $faceImage = $user->usesFaceImage() && ! empty($user->face_image)
-                ? (string) $user->face_image
-                : null;
+            $faceImage = $user->faceImageForGeneration();
 
             $remoteUrl = $outfitGenerationProvider->createBaseModel(
                 $user->height !== null ? (int) $user->height : null,

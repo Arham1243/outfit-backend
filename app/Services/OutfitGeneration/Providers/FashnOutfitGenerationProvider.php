@@ -6,6 +6,7 @@ use App\Contracts\OutfitGeneration\OutfitGenerationProvider;
 use App\Services\Fashn\FashnClient;
 use App\Services\Fashn\FashnException;
 use App\Services\OutfitGeneration\OutfitGenerationException;
+use App\Support\FaceMode;
 
 class FashnOutfitGenerationProvider implements OutfitGenerationProvider
 {
@@ -20,7 +21,9 @@ class FashnOutfitGenerationProvider implements OutfitGenerationProvider
 
     public function createBaseModel(?int $heightCm, ?string $gender, ?string $faceImage = null, ?string $faceMode = null): string
     {
-        return $this->wrap(fn () => $this->fashnClient->modelCreate($heightCm, $gender, $faceImage));
+        $faceReference = FaceMode::requiresFaceImage($faceMode) ? $faceImage : null;
+
+        return $this->wrap(fn () => $this->fashnClient->modelCreate($heightCm, $gender, $faceReference));
     }
 
     public function applyGarment(string $modelImage, string $productImage): string

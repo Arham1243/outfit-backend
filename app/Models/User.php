@@ -98,6 +98,15 @@ class User extends Authenticatable
         return FaceMode::requiresFaceImage($this->faceMode());
     }
 
+    public function faceImageForGeneration(): ?string
+    {
+        if (! $this->usesFaceImage() || empty($this->face_image)) {
+            return null;
+        }
+
+        return (string) $this->face_image;
+    }
+
     public function hasValidBaseModelCache(): bool
     {
         return ! empty($this->base_model_image)

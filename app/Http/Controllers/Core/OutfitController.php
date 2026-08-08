@@ -218,6 +218,7 @@ class OutfitController
             'wardrobe_ids' => $outfit->wardrobe_ids,
             'generation_provider' => $outfit->generation_provider,
             'generation_model' => $outfit->generation_model,
+            'generation_settings' => $outfit->generation_settings,
             'error' => $outfit->error,
         ];
     }
