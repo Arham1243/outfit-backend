@@ -6,11 +6,11 @@ class OutfitRequirements
 {
     public const FOOTWEAR = ['shoes'];
 
-    public const TOPS = ['shirt', 't-shirt', 'sweater'];
+    public const TOPS = ['shirt', 't-shirt', 'hoodie', 'sweatshirt'];
 
     public const BOTTOMS = ['pants', 'jeans', 'shorts'];
 
-    public const ONE_PIECE = ['dress'];
+    public const ONE_PIECE = [];
 
     /**
      * @param  array<string, int>  $typeCounts

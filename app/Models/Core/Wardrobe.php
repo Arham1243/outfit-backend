@@ -16,10 +16,6 @@ class Wardrobe extends Model
 
     protected $guarded = ['id', 'user_id', 'created_at', 'updated_at'];
 
-    protected $casts = [
-        'metadata' => 'array',
-    ];
-
     protected $appends = ['image_url'];
 
     public function getActivitylogOptions(): LogOptions

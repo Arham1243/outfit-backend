@@ -72,7 +72,7 @@ class OpenAiClient
                     'content' => 'You are a fashion stylist. Rank outfit combinations from the user wardrobe. '
                         .'Return only valid JSON matching the provided schema. '
                         .'Each combination must use real wardrobe item IDs from the input. '
-                        .'Prefer color harmony, occasion fit, and style coherence.',
+                        .'Prefer occasion fit and style coherence.',
                 ],
                 [
                     'role' => 'user',

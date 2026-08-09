@@ -22,9 +22,9 @@ class ClassifyWardrobeItem implements ShouldQueue
         'jeans',
         'shoes',
         'jacket',
-        'sweater',
+        'hoodie',
+        'sweatshirt',
         'shorts',
-        'dress',
     ];
 
     private const LABEL_KEYWORDS = [
@@ -34,9 +34,9 @@ class ClassifyWardrobeItem implements ShouldQueue
         'jeans' => [' jean', ' denim'],
         'shoes' => [' shoe', ' sneaker', ' boot', ' sandal', ' slipper', ' loafer', ' clog', ' mule'],
         'jacket' => [' jacket', ' coat', ' blazer', ' parka', ' windbreaker', ' anorak'],
-        'sweater' => [' sweater', ' cardigan', ' pullover', ' sweatshirt', ' hoodie', ' fleece'],
+        'hoodie' => [' hoodie', ' hooded sweatshirt'],
+        'sweatshirt' => [' sweatshirt', ' crewneck', ' crew neck', ' sweater', ' cardigan', ' pullover', ' fleece'],
         'shorts' => [' shorts', ' trunks'],
-        'dress' => [' dress', ' gown', ' sundress', ' kimono'],
     ];
 
     public int $tries = 3;
@@ -82,23 +82,16 @@ class ClassifyWardrobeItem implements ShouldQueue
             return;
         }
 
-        $dominantColor = $this->extractDominantColor($imageContents);
-
         $topPrediction = $predictions[0];
+
+        $this->wardrobe->refresh();
+
+        if (! empty($this->wardrobe->type)) {
+            return;
+        }
 
         $this->wardrobe->update([
             'type' => $topPrediction['label'],
-            'metadata' => [
-                'confidence' => $topPrediction['score'],
-                'dominant_color' => $dominantColor,
-                'predicted_labels' => array_map(
-                    fn (array $prediction) => [
-                        'label' => $prediction['label'],
-                        'score' => $prediction['score'],
-                    ],
-                    $predictions
-                ),
-            ],
         ]);
     }
 
@@ -232,60 +225,5 @@ class ClassifyWardrobeItem implements ShouldQueue
         }
 
         return null;
-    }
-
-    private function extractDominantColor(string $imageContents): ?string
-    {
-        if (! extension_loaded('gd')) {
-            return null;
-        }
-
-        $image = @imagecreatefromstring($imageContents);
-
-        if ($image === false) {
-            return null;
-        }
-
-        $width = imagesx($image);
-        $height = imagesy($image);
-        $sampleSize = 50;
-
-        $sample = imagecreatetruecolor($sampleSize, $sampleSize);
-        imagecopyresampled($sample, $image, 0, 0, 0, 0, $sampleSize, $sampleSize, $width, $height);
-        imagedestroy($image);
-
-        $buckets = [];
-
-        for ($x = 0; $x < $sampleSize; $x++) {
-            for ($y = 0; $y < $sampleSize; $y++) {
-                $rgb = imagecolorat($sample, $x, $y);
-                $r = ($rgb >> 16) & 0xFF;
-                $g = ($rgb >> 8) & 0xFF;
-                $b = $rgb & 0xFF;
-
-                if ($r > 240 && $g > 240 && $b > 240) {
-                    continue;
-                }
-
-                $key = sprintf(
-                    '%02x%02x%02x',
-                    (int) (floor($r / 16) * 16 + 8),
-                    (int) (floor($g / 16) * 16 + 8),
-                    (int) (floor($b / 16) * 16 + 8)
-                );
-
-                $buckets[$key] = ($buckets[$key] ?? 0) + 1;
-            }
-        }
-
-        imagedestroy($sample);
-
-        if ($buckets === []) {
-            return null;
-        }
-
-        arsort($buckets);
-
-        return '#'.array_key_first($buckets);
     }
 }

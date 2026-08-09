@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Core;
 
+use App\Support\WardrobeTypes;
+use Illuminate\Validation\Rule;
 use Orion\Http\Requests\Request;
 
 class WardrobeRequest extends Request
@@ -10,8 +12,7 @@ class WardrobeRequest extends Request
     {
         return [
             'image' => ['nullable', 'string'],
-            'type' => ['nullable', 'string', 'max:255'],
-            'metadata' => ['nullable', 'array'],
+            'type' => ['nullable', 'string', Rule::in(WardrobeTypes::ALL)],
         ];
     }
 

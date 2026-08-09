@@ -31,7 +31,6 @@ class OpenAiCombinationProvider implements OutfitCombinationProvider
             ->map(fn (Wardrobe $item) => [
                 'id' => $item->id,
                 'type' => $item->type,
-                'metadata' => $item->metadata ?? [],
             ])
             ->values()
             ->all();

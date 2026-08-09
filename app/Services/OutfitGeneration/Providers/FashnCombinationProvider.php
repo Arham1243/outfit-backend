@@ -4,7 +4,7 @@ namespace App\Services\OutfitGeneration\Providers;
 
 use App\Contracts\OutfitGeneration\OutfitCombinationProvider;
 use App\Models\Core\Wardrobe;
-use App\Support\OutfitRequirements;
+use App\Support\OutfitCombinationEnumerator;
 use Illuminate\Support\Collection;
 
 class FashnCombinationProvider implements OutfitCombinationProvider
@@ -33,56 +33,32 @@ class FashnCombinationProvider implements OutfitCombinationProvider
      */
     private function buildSlotPools(Collection $items): array
     {
-        $byType = $items->groupBy('type');
-        $shoes = $this->itemsForTypes($byType, OutfitRequirements::FOOTWEAR);
+        $enumerated = OutfitCombinationEnumerator::enumerate($items);
 
-        if ($shoes === []) {
+        if ($enumerated === []) {
             return [];
         }
 
-        $dresses = $this->itemsForTypes($byType, OutfitRequirements::ONE_PIECE);
-        $tops = $this->itemsForTypes($byType, OutfitRequirements::TOPS);
-        $bottoms = $this->itemsForTypes($byType, OutfitRequirements::BOTTOMS);
-
+        $itemsById = $items->keyBy('id');
         $pools = [];
 
-        if ($dresses !== []) {
-            foreach ($dresses as $dress) {
-                foreach ($shoes as $shoe) {
-                    $pools[] = [$dress, $shoe];
+        foreach ($enumerated as $entry) {
+            $poolItems = [];
+
+            foreach ($entry['wardrobe_ids'] as $id) {
+                $item = $itemsById->get($id);
+
+                if ($item instanceof Wardrobe) {
+                    $poolItems[] = $item;
                 }
             }
-        }
 
-        if ($tops !== [] && $bottoms !== []) {
-            foreach ($tops as $top) {
-                foreach ($bottoms as $bottom) {
-                    foreach ($shoes as $shoe) {
-                        $pools[] = [$top, $bottom, $shoe];
-                    }
-                }
+            if ($poolItems !== []) {
+                $pools[] = $poolItems;
             }
         }
 
         return $pools;
-    }
-
-    /**
-     * @param  Collection<string, Collection<int, Wardrobe>>  $byType
-     * @param  list<string>  $types
-     * @return list<Wardrobe>
-     */
-    private function itemsForTypes(Collection $byType, array $types): array
-    {
-        $result = [];
-
-        foreach ($types as $type) {
-            foreach ($byType->get($type, collect()) as $item) {
-                $result[] = $item;
-            }
-        }
-
-        return $result;
     }
 
     /**
@@ -100,28 +76,10 @@ class FashnCombinationProvider implements OutfitCombinationProvider
             $combinations[] = [
                 'wardrobe_ids' => $wardrobeIds,
                 'items' => $items,
-                'confidence' => $this->averageConfidence($items),
+                'confidence' => 0.0,
             ];
         }
 
         return $combinations;
-    }
-
-    /**
-     * @param  list<Wardrobe>  $items
-     */
-    private function averageConfidence(array $items): float
-    {
-        if ($items === []) {
-            return 0.0;
-        }
-
-        $total = 0.0;
-
-        foreach ($items as $item) {
-            $total += (float) ($item->metadata['confidence'] ?? 0);
-        }
-
-        return round($total / count($items), 4);
     }
 }

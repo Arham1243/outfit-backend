@@ -17,6 +17,7 @@ Route::middleware(['granular.permission:core,core.wardrobe'])->group(function ()
 
 Route::middleware(['granular.permission:core,core.outfits'])->group(function () {
     Route::get('outfits/wardrobe-type-counts', [WardrobeController::class, 'typeCounts']);
+    Route::get('outfits/combination-stats', [OutfitController::class, 'combinationStats']);
     Route::post('outfits/generate', [OutfitController::class, 'generate']);
     Route::get('outfits/latest-batch', [OutfitController::class, 'latestBatch']);
     Route::get('outfits/generated/{batchId}', [OutfitController::class, 'showBatch']);

@@ -44,6 +44,16 @@ class OutfitController
     }
 
     /**
+     * Return wardrobe combination totals and remaining generate capacity.
+     */
+    public function combinationStats(Request $request)
+    {
+        return response()->json([
+            'data' => $this->combinationService->statsForUser($request->user()),
+        ]);
+    }
+
+    /**
      * Validate profile + wardrobe, enqueue generation jobs, return pending batch.
      */
     public function generate(Request $request)
@@ -106,10 +116,13 @@ class OutfitController
                 'errors' => [
                     'wardrobe' => [__('outfit.no_combinations_available')],
                 ],
-                'meta' => [
-                    'all_combinations_exhausted' => true,
-                    'latest_batch_id' => $latestBatchId,
-                ],
+                'meta' => array_merge(
+                    $this->combinationService->statsForUser($user),
+                    [
+                        'all_combinations_exhausted' => true,
+                        'latest_batch_id' => $latestBatchId,
+                    ]
+                ),
             ], 422);
         }
 
@@ -132,13 +145,16 @@ class OutfitController
 
         return response()->json([
             'data' => collect($outfits)->map(fn (GeneratedOutfit $outfit) => $this->serializeOutfit($outfit))->values(),
-            'meta' => [
-                'batch_id' => $batchId,
-                'current_page' => 1,
-                'last_page' => 1,
-                'per_page' => $total,
-                'total' => $total,
-            ],
+            'meta' => array_merge(
+                $this->combinationService->statsForUser($user),
+                [
+                    'batch_id' => $batchId,
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => $total,
+                    'total' => $total,
+                ]
+            ),
         ]);
     }
 
