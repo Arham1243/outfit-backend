@@ -9,6 +9,7 @@ use App\Services\OutfitCombinationService;
 use App\Support\FaceMode;
 use App\Support\OutfitRequirements;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class OutfitController
@@ -33,7 +34,7 @@ class OutfitController
         $paginator = $query->paginate($limit, ['*'], 'page', $page);
 
         return response()->json([
-            'data' => $paginator->getCollection()->map(fn (GeneratedOutfit $outfit) => $this->serializeOutfit($outfit))->values(),
+            'data' => $this->serializeOutfits($paginator->getCollection(), $user->id),
             'meta' => [
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
@@ -144,7 +145,7 @@ class OutfitController
         $total = count($outfits);
 
         return response()->json([
-            'data' => collect($outfits)->map(fn (GeneratedOutfit $outfit) => $this->serializeOutfit($outfit))->values(),
+            'data' => $this->serializeOutfits(collect($outfits), $user->id),
             'meta' => array_merge(
                 $this->combinationService->statsForUser($user),
                 [
@@ -208,7 +209,7 @@ class OutfitController
         }
 
         return [
-            'data' => $outfits->map(fn (GeneratedOutfit $outfit) => $this->serializeOutfit($outfit))->values(),
+            'data' => $this->serializeOutfits($outfits, $userId),
             'meta' => [
                 'batch_id' => $batchId,
                 'total' => $outfits->count(),
@@ -223,20 +224,90 @@ class OutfitController
     }
 
     /**
+     * @param  Collection<int, GeneratedOutfit>  $outfits
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    private function serializeOutfits(Collection $outfits, int $userId): Collection
+    {
+        $wardrobeIds = $outfits
+            ->flatMap(fn (GeneratedOutfit $outfit) => $outfit->wardrobe_ids ?? [])
+            ->unique()
+            ->filter()
+            ->values();
+
+        $wardrobesById = $wardrobeIds->isEmpty()
+            ? collect()
+            : Wardrobe::query()
+                ->where('user_id', $userId)
+                ->whereIn('id', $wardrobeIds)
+                ->get()
+                ->keyBy('id');
+
+        return $outfits
+            ->map(fn (GeneratedOutfit $outfit) => $this->serializeOutfit($outfit, $wardrobesById))
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, Wardrobe>|null  $wardrobesById
      * @return array<string, mixed>
      */
-    private function serializeOutfit(GeneratedOutfit $outfit): array
+    private function serializeOutfit(GeneratedOutfit $outfit, ?Collection $wardrobesById = null): array
     {
         return [
             'uuid' => $outfit->uuid,
             'status' => $outfit->status,
             'image_url' => $outfit->image_url,
             'wardrobe_ids' => $outfit->wardrobe_ids,
+            'wardrobe_items' => $this->serializeWardrobeItems(
+                $outfit->wardrobe_ids ?? [],
+                $outfit->user_id,
+                $wardrobesById
+            ),
             'generation_provider' => $outfit->generation_provider,
             'generation_model' => $outfit->generation_model,
             'generation_settings' => $outfit->generation_settings,
             'error' => $outfit->error,
         ];
+    }
+
+    /**
+     * @param  list<int>|array<int, int>  $wardrobeIds
+     * @param  Collection<int, Wardrobe>|null  $wardrobesById
+     * @return list<array<string, mixed>>
+     */
+    private function serializeWardrobeItems(array $wardrobeIds, int $userId, ?Collection $wardrobesById = null): array
+    {
+        if ($wardrobeIds === []) {
+            return [];
+        }
+
+        if ($wardrobesById === null) {
+            $wardrobesById = Wardrobe::query()
+                ->where('user_id', $userId)
+                ->whereIn('id', $wardrobeIds)
+                ->get()
+                ->keyBy('id');
+        }
+
+        $items = [];
+
+        foreach ($wardrobeIds as $wardrobeId) {
+            $wardrobe = $wardrobesById->get($wardrobeId);
+
+            if (! $wardrobe) {
+                continue;
+            }
+
+            $items[] = [
+                'id' => $wardrobe->id,
+                'uuid' => $wardrobe->uuid,
+                'type' => $wardrobe->type,
+                'image_url' => $wardrobe->image_url,
+            ];
+        }
+
+        return $items;
     }
 
     /**
