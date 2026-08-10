@@ -29,17 +29,17 @@ class WardrobeController extends Controller
 
     public function searchableBy(): array
     {
-        return ['uuid', 'type'];
+        return ['uuid', 'type', 'name'];
     }
 
     public function sortableBy(): array
     {
-        return ['type', 'created_at', 'updated_at'];
+        return ['type', 'name', 'created_at', 'updated_at'];
     }
 
     public function filterableBy(): array
     {
-        return ['uuid', 'type'];
+        return ['uuid', 'type', 'name'];
     }
 
     /**

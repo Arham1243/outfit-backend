@@ -13,6 +13,7 @@ class WardrobeRequest extends Request
         return [
             'image' => ['nullable', 'string'],
             'type' => ['nullable', 'string', Rule::in(WardrobeTypes::ALL)],
+            'name' => ['nullable', 'string', 'max:255'],
         ];
     }
 
