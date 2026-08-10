@@ -19,6 +19,7 @@ class UserResource extends JsonResource
                 fn () => new LanguagePreferenceResource($this->preferredLanguage)
             ),
             'dark_mode' => (bool) ($this->dark_mode ?? false),
+            'sidebar_open' => (bool) ($this->sidebar_open ?? true),
             'name' => $this->name,
             'status' => $this->status,
             'email' => $this->email,

@@ -27,6 +27,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'dark_mode' => 'boolean',
+        'sidebar_open' => 'boolean',
     ];
 
     protected $guarded = ['id', 'created_at', 'updated_at'];

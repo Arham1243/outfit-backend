@@ -212,17 +212,26 @@ class AuthController extends Controller
     public function updateUiPreferences(Request $request)
     {
         $validated = $request->validate([
-            'dark_mode' => ['required', 'boolean'],
+            'dark_mode' => ['sometimes', 'boolean'],
+            'sidebar_open' => ['sometimes', 'boolean'],
         ]);
 
+        if ($validated === []) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'preferences' => ['At least one preference is required.'],
+                ],
+            ], 422);
+        }
+
         $user = $request->user();
-        $user->update([
-            'dark_mode' => $validated['dark_mode'],
-        ]);
+        $user->update($validated);
 
         return response()->json([
             'data' => [
                 'dark_mode' => (bool) $user->dark_mode,
+                'sidebar_open' => (bool) ($user->sidebar_open ?? true),
             ],
         ]);
     }
