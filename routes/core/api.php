@@ -21,6 +21,7 @@ Route::middleware(['granular.permission:core,core.outfits'])->group(function () 
     Route::post('outfits/generate', [OutfitController::class, 'generate']);
     Route::get('outfits/latest-batch', [OutfitController::class, 'latestBatch']);
     Route::get('outfits/generated/{batchId}', [OutfitController::class, 'showBatch']);
+    Route::get('outfits/{uuid}/download', [OutfitController::class, 'download']);
     Route::get('outfits', [OutfitController::class, 'index']);
 });
 

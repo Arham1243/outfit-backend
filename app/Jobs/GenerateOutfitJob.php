@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\OutfitGeneration\OutfitGenerationException;
 use App\Services\OutfitGeneration\Providers\OpenAiOutfitGenerationProvider;
 use App\Support\GenerationSettingsSnapshot;
+use App\Support\OutfitDisplayNameGenerator;
 use App\Support\OutfitRequirements;
 use App\Support\UserUploadPath;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -93,6 +94,7 @@ class GenerateOutfitJob implements ShouldQueue
                 'status' => GeneratedOutfit::STATUS_COMPLETED,
                 'image' => $relativePath,
                 'error' => null,
+                'name' => OutfitDisplayNameGenerator::forUuid((string) $generatedOutfit->uuid),
             ]);
         } catch (OutfitGenerationException $exception) {
             $this->markFailed($generatedOutfit, $exception->getMessage(), $exception->getContext());

@@ -62,7 +62,7 @@ class OutfitCombinationService
     /**
      * @return list<array{wardrobe_ids: list<int>, items: list<Wardrobe>, confidence: float}>
      */
-    public function generateForUser(User $user): array
+    public function generateForUser(User $user, ?int $limit = null): array
     {
         $items = $this->eligibleWardrobeItems($user->id);
 
@@ -81,7 +81,7 @@ class OutfitCombinationService
 
         $combinations = $this->excludeRecentDuplicates($user->id, $combinations);
 
-        return array_values($this->capByConfidence($combinations));
+        return array_values($this->capByConfidence($combinations, $limit));
     }
 
     /**
@@ -150,9 +150,9 @@ class OutfitCombinationService
      * @param  list<array{wardrobe_ids: list<int>, items: list<Wardrobe>, confidence: float}>  $combinations
      * @return list<array{wardrobe_ids: list<int>, items: list<Wardrobe>, confidence: float}>
      */
-    private function capByConfidence(array $combinations): array
+    private function capByConfidence(array $combinations, ?int $limit = null): array
     {
-        $max = max(1, (int) config('outfit_generation.max_combinations', 2));
+        $max = max(1, $limit ?? (int) config('outfit_generation.max_combinations', 2));
 
         usort($combinations, static fn (array $a, array $b) => $b['confidence'] <=> $a['confidence']);
 

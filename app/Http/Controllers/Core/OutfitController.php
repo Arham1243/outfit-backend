@@ -10,6 +10,7 @@ use App\Support\FaceMode;
 use App\Support\OutfitRequirements;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class OutfitController
@@ -42,6 +43,33 @@ class OutfitController
                 'total' => $paginator->total(),
             ],
         ]);
+    }
+
+    /**
+     * Download a generated outfit image for the authenticated user.
+     */
+    public function download(Request $request, string $uuid)
+    {
+        $outfit = GeneratedOutfit::query()
+            ->where('user_id', $request->user()->id)
+            ->where('uuid', $uuid)
+            ->firstOrFail();
+
+        if (empty($outfit->image) || ! Storage::disk('public')->exists($outfit->image)) {
+            abort(404);
+        }
+
+        $extension = pathinfo($outfit->image, PATHINFO_EXTENSION) ?: 'jpg';
+        $filename = Str::slug($outfit->name ?: 'outfit');
+
+        if ($filename === '') {
+            $filename = 'outfit';
+        }
+
+        return Storage::disk('public')->download(
+            $outfit->image,
+            $filename.'.'.$extension
+        );
     }
 
     /**
@@ -104,7 +132,9 @@ class OutfitController
             ], 422);
         }
 
-        $combinations = $this->combinationService->generateForUser($user);
+        $stats = $this->combinationService->statsForUser($user);
+        $batchCount = $this->resolveBatchCount($request, $stats['remaining'] ?? 0);
+        $combinations = $this->combinationService->generateForUser($user, $batchCount);
 
         if ($combinations === []) {
             $latestBatchId = GeneratedOutfit::query()
@@ -256,8 +286,10 @@ class OutfitController
     {
         return [
             'uuid' => $outfit->uuid,
+            'name' => $outfit->name,
             'status' => $outfit->status,
             'image_url' => $outfit->image_url,
+            'created_at' => $outfit->created_at?->toIso8601String(),
             'wardrobe_ids' => $outfit->wardrobe_ids,
             'wardrobe_items' => $this->serializeWardrobeItems(
                 $outfit->wardrobe_ids ?? [],
@@ -302,12 +334,32 @@ class OutfitController
             $items[] = [
                 'id' => $wardrobe->id,
                 'uuid' => $wardrobe->uuid,
+                'name' => $wardrobe->name,
                 'type' => $wardrobe->type,
                 'image_url' => $wardrobe->image_url,
             ];
         }
 
         return $items;
+    }
+
+    /**
+     * @param  array{remaining?: int}  $stats
+     */
+    private function resolveBatchCount(Request $request, int $remaining): int
+    {
+        $allowed = [3, 6, 9, 12];
+        $requested = (int) $request->input('count', 3);
+
+        if (! in_array($requested, $allowed, true)) {
+            $requested = 3;
+        }
+
+        if ($remaining <= 0) {
+            return $requested;
+        }
+
+        return min($requested, $remaining);
     }
 
     /**
