@@ -53,7 +53,6 @@ class UserController extends Controller
             'email',
             'status',
             'gender',
-            'date_of_birth',
             'role.name',
             'created_at',
         ];
@@ -74,7 +73,6 @@ class UserController extends Controller
             'name',
             'email',
             'gender',
-            'date_of_birth',
             'preferred_language.name',
         ];
     }

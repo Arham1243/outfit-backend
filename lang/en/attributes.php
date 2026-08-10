@@ -2,7 +2,6 @@
 
 return [
     'dark_mode' => 'dark mode',
-    'date_of_birth' => 'date of birth',
     'device_fingerprint' => 'device fingerprint',
     'device_info' => 'device info',
     'email' => 'email',

@@ -23,9 +23,6 @@ class UserResource extends JsonResource
             'status' => $this->status,
             'email' => $this->email,
             'gender' => $this->gender,
-            'date_of_birth' => $this->date_of_birth
-                ? \Illuminate\Support\Carbon::parse($this->date_of_birth)->format('Y-m-d')
-                : null,
             'profile_image' => $this->profile_image_url,
             'face_image' => $this->face_image_url,
             'face_mode' => $this->faceMode(),

@@ -86,7 +86,6 @@ class UserRequest extends Request
             'name' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', 'max:50'],
             'gender' => ['nullable', 'string', Rule::in(['male', 'female'])],
-            'date_of_birth' => ['nullable', 'date', 'before_or_equal:today'],
             'height' => ['nullable', 'integer', 'min:50', 'max:300'],
             'face_image' => ['nullable', 'string'],
             'face_mode' => ['nullable', 'string', Rule::in(FaceMode::all())],

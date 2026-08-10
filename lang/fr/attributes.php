@@ -2,7 +2,6 @@
 
 return [
     'dark_mode' => 'mode sombre',
-    'date_of_birth' => 'date de naissance',
     'device_fingerprint' => 'empreinte de l appareil',
     'device_info' => 'informations de l appareil',
     'email' => 'e-mail',
