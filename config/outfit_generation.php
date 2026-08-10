@@ -24,7 +24,7 @@ return [
 
     'default' => env('OUTFIT_GENERATION_PROVIDER', 'fashn'),
 
-    'max_combinations' => (int) env('OUTFIT_MAX_COMBINATIONS', env('FASHN_MAX_COMBINATIONS', 2)),
+    'max_combinations' => (int) env('OUTFIT_MAX_COMBINATIONS', env('FASHN_MAX_COMBINATIONS', 4)),
     'dedupe_days' => (int) env('OUTFIT_DEDUPE_DAYS', env('FASHN_DEDUPE_DAYS', 30)),
 
     'providers' => [

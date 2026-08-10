@@ -348,11 +348,11 @@ class OutfitController
      */
     private function resolveBatchCount(Request $request, int $remaining): int
     {
-        $allowed = [3, 6, 9, 12];
-        $requested = (int) $request->input('count', 3);
+        $allowed = [1, 2, 3, 4];
+        $requested = (int) $request->input('count', 1);
 
         if (! in_array($requested, $allowed, true)) {
-            $requested = 3;
+            $requested = 1;
         }
 
         if ($remaining <= 0) {
