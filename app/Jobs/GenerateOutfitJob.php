@@ -7,7 +7,6 @@ use App\Models\Core\GeneratedOutfit;
 use App\Models\Core\Wardrobe;
 use App\Models\User;
 use App\Services\OutfitGeneration\OutfitGenerationException;
-use App\Services\OutfitGeneration\Providers\OpenAiOutfitGenerationProvider;
 use App\Support\GenerationSettingsSnapshot;
 use App\Support\OutfitDisplayNameGenerator;
 use App\Support\OutfitRequirements;
@@ -16,10 +15,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class GenerateOutfitJob implements ShouldQueue
@@ -59,36 +55,22 @@ class GenerateOutfitJob implements ShouldQueue
                 (string) $generatedOutfit->uuid
             );
 
-            if ($outfitGenerationProvider instanceof OpenAiOutfitGenerationProvider) {
-                $faceMode = $user->faceMode();
-                $faceImage = $user->faceImageForGeneration();
+            $faceMode = $user->faceMode();
+            $faceImage = $user->faceImageForGeneration();
 
-                $garmentImages = array_map(
-                    static fn (Wardrobe $item) => (string) $item->image,
-                    $wardrobeItems
-                );
+            $garmentImages = array_map(
+                static fn (Wardrobe $item) => (string) $item->image,
+                $wardrobeItems
+            );
 
-                $outfitGenerationProvider->generateFullOutfit(
-                    $user->height !== null ? (int) $user->height : null,
-                    is_string($user->gender) ? $user->gender : null,
-                    $faceImage,
-                    $faceMode,
-                    $garmentImages,
-                    $relativePath
-                );
-            } else {
-                $baseModelImage = $this->resolveBaseModelImage($user, $outfitGenerationProvider);
-                $modelImage = $baseModelImage;
-
-                foreach ($wardrobeItems as $wardrobeItem) {
-                    $modelImage = $outfitGenerationProvider->applyGarment(
-                        $modelImage,
-                        (string) $wardrobeItem->image
-                    );
-                }
-
-                $this->persistRemoteImage($modelImage, $relativePath);
-            }
+            $outfitGenerationProvider->generateFullOutfit(
+                $user->height !== null ? (int) $user->height : null,
+                is_string($user->gender) ? $user->gender : null,
+                $faceImage,
+                $faceMode,
+                $garmentImages,
+                $relativePath
+            );
 
             $generatedOutfit->update([
                 'status' => GeneratedOutfit::STATUS_COMPLETED,
@@ -112,37 +94,6 @@ class GenerateOutfitJob implements ShouldQueue
         }
 
         $this->markFailed($generatedOutfit, $exception?->getMessage() ?? 'GenerateOutfitJob failed.');
-    }
-
-    private function resolveBaseModelImage(User $user, OutfitGenerationProvider $outfitGenerationProvider): string
-    {
-        return Cache::lock('outfit-base-model:'.$user->id, 600)->block(120, function () use ($user, $outfitGenerationProvider) {
-            $user->refresh();
-
-            if ($user->hasValidBaseModelCache()) {
-                return (string) $user->base_model_image;
-            }
-
-            $faceMode = $user->faceMode();
-            $faceImage = $user->faceImageForGeneration();
-
-            $remoteUrl = $outfitGenerationProvider->createBaseModel(
-                $user->height !== null ? (int) $user->height : null,
-                is_string($user->gender) ? $user->gender : null,
-                $faceImage,
-                $faceMode
-            );
-
-            $relativePath = UserUploadPath::baseModel((string) $user->uuid);
-            $this->persistRemoteImage($remoteUrl, $relativePath);
-
-            $user->update([
-                'base_model_image' => $relativePath,
-                'base_model_fingerprint' => $user->baseModelFingerprint(),
-            ]);
-
-            return $relativePath;
-        });
     }
 
     /**
@@ -202,20 +153,6 @@ class GenerateOutfitJob implements ShouldQueue
         return $ordered;
     }
 
-    private function persistRemoteImage(string $url, string $relativePath): void
-    {
-        $response = Http::timeout(120)->get($url);
-
-        if (! $response->successful()) {
-            throw new OutfitGenerationException(sprintf(
-                'Failed to download generated image (HTTP %d).',
-                $response->status()
-            ));
-        }
-
-        Storage::disk('public')->put($relativePath, $response->body());
-    }
-
     /**
      * @return array{generation_provider: string, generation_model: string|null}
      */
@@ -223,15 +160,11 @@ class GenerateOutfitJob implements ShouldQueue
     {
         $provider = $outfitGenerationProvider->name();
 
-        $model = match ($provider) {
-            'openai' => (string) config('services.openai.image_model', 'gpt-image-2'),
-            'fashn' => 'tryon-max',
-            default => null,
-        };
-
         return [
             'generation_provider' => $provider,
-            'generation_model' => $model,
+            'generation_model' => $provider === 'openai'
+                ? (string) config('services.openai.image_model', 'gpt-image-2')
+                : null,
         ];
     }
 

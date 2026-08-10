@@ -7,16 +7,19 @@ interface OutfitGenerationProvider
     public function name(): string;
 
     /**
-     * @throws \App\Services\OutfitGeneration\OutfitGenerationException
-     */
-    public function createBaseModel(?int $heightCm, ?string $gender, ?string $faceImage = null, ?string $faceMode = null): string;
-
-    /**
-     * Apply a wardrobe garment onto the model image.
+     * Single-pass outfit generation: face/body reference + all garments in one API call.
      *
-     * @return string URL or local storage path usable as the next model input
+     * @param  list<string>  $garmentImages
+     * @return string Relative storage path of the generated outfit image
      *
      * @throws \App\Services\OutfitGeneration\OutfitGenerationException
      */
-    public function applyGarment(string $modelImage, string $productImage): string;
+    public function generateFullOutfit(
+        ?int $heightCm,
+        ?string $gender,
+        ?string $faceImage,
+        ?string $faceMode,
+        array $garmentImages,
+        string $outputRelativePath,
+    ): string;
 }

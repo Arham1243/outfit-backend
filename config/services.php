@@ -24,22 +24,6 @@ return [
         ),
     ],
 
-    'fashn' => [
-        'api_key' => env('FASHN_API_KEY'),
-        'base_url' => env('FASHN_BASE_URL', 'https://api.fashn.ai'),
-        'max_combinations' => (int) env('FASHN_MAX_COMBINATIONS', 2),
-        'max_attempts' => (int) env('FASHN_MAX_ATTEMPTS', 2),
-        'poll_interval_seconds' => (int) env('FASHN_POLL_INTERVAL_SECONDS', 3),
-        'poll_timeout_seconds' => (int) env('FASHN_POLL_TIMEOUT_SECONDS', 600),
-        'generation_mode' => env('FASHN_GENERATION_MODE', 'fast'),
-        'resolution' => env('FASHN_RESOLUTION', '1k'),
-        'dedupe_days' => (int) env('FASHN_DEDUPE_DAYS', 30),
-        'base_model_cache_version' => env('FASHN_BASE_MODEL_CACHE_VERSION', 'v3-generic'),
-        'model_create_generation_mode' => env('FASHN_MODEL_CREATE_MODE', 'balanced'),
-        'model_create_aspect_ratio' => env('FASHN_MODEL_CREATE_ASPECT_RATIO', '2:3'),
-        'model_create_resolution' => env('FASHN_MODEL_CREATE_RESOLUTION', '2k'),
-    ],
-
     'openai' => [
         'api_key' => env('OPENAI_API_KEY'),
         'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),

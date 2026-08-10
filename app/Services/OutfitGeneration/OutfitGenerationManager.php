@@ -14,7 +14,7 @@ class OutfitGenerationManager
 
     public function driver(?string $name = null): OutfitGenerationProvider
     {
-        $name = $name ?? (string) config('outfit_generation.default', 'fashn');
+        $name = $name ?? (string) config('outfit_generation.default', 'openai');
         $providers = config('outfit_generation.providers', []);
 
         if (! is_array($providers) || ! isset($providers[$name])) {
@@ -62,7 +62,7 @@ class OutfitGenerationManager
 
     public function combinationDriver(?string $name = null): OutfitCombinationProvider
     {
-        $name = $name ?? (string) config('outfit_generation.default', 'fashn');
+        $name = $name ?? (string) config('outfit_generation.default', 'openai');
         $providers = config('outfit_generation.providers', []);
 
         if (! is_array($providers) || ! isset($providers[$name])) {
@@ -110,7 +110,7 @@ class OutfitGenerationManager
 
     public function defaultDriverName(): string
     {
-        return (string) config('outfit_generation.default', 'fashn');
+        return (string) config('outfit_generation.default', 'openai');
     }
 
     public function baseModelCacheVersion(?string $providerName = null): string

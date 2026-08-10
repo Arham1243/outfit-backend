@@ -50,31 +50,6 @@ class OpenAiOutfitGenerationProvider implements OutfitGenerationProvider
         ));
     }
 
-    public function createBaseModel(?int $heightCm, ?string $gender, ?string $faceImage = null, ?string $faceMode = null): string
-    {
-        $mode = $this->normalizeFaceMode($faceMode);
-        $references = [$this->openAiClient->resolveStudioReferenceAbsolutePath()];
-
-        if ($this->faceModeUsesReference($mode) && $faceImage !== null && $faceImage !== '') {
-            $references[] = $faceImage;
-        }
-
-        $prompt = $this->buildBaseModelPrompt($heightCm, $gender, $mode);
-
-        return $this->wrap(fn () => $this->openAiClient->editImage($references, $prompt));
-    }
-
-    public function applyGarment(string $modelImage, string $productImage): string
-    {
-        $references = [$modelImage, $productImage];
-
-        $prompt = 'Image 1 is the current full-body model photo — preserve this person\'s exact face, body, pose, and identity. '
-            .'Image 2 is a garment product photo. Apply the garment from Image 2 onto the person in Image 1. '
-            .'Plain white studio background, professional fashion photography, photorealistic, no facial artifacts.';
-
-        return $this->wrap(fn () => $this->openAiClient->editImage($references, $prompt));
-    }
-
     /**
      * @param  list<string>  $garmentImages
      * @return list<string>
@@ -146,50 +121,6 @@ class OpenAiOutfitGenerationProvider implements OutfitGenerationProvider
     private function faceModeUsesReference(string $faceMode): bool
     {
         return in_array($faceMode, ['user_face', 'user_body_ai_face'], true);
-    }
-
-    private function buildBaseModelPrompt(?int $heightCm, ?string $gender, string $faceMode): string
-    {
-        $heightText = ($heightCm !== null && $heightCm > 0)
-            ? sprintf('approximately %dcm build', $heightCm)
-            : 'balanced proportions';
-
-        $genderText = match ($gender) {
-            'female' => 'adult woman',
-            'male' => 'adult man',
-            default => 'fashion model',
-        };
-
-        $studioRef = 'Image 1 is the studio pose, lighting, framing, and white background reference only. '
-            .'Do not copy the person from Image 1.';
-
-        return match ($faceMode) {
-            'user_face' => sprintf(
-                '%s Image 2 is the face identity reference. Generate a professional full-body studio fashion photograph with Image 1\'s pose and background. '
-                .'The generated person must be a %s with %s. '
-                .'The face must exactly match Image 2, including glasses, facial hair, skin tone, and all facial features. '
-                .'Plain white studio background, full body, standing, relaxed pose.',
-                $studioRef,
-                $genderText,
-                $heightText
-            ),
-            'user_body_ai_face' => sprintf(
-                '%s Image 2 is a body and build proportion reference only. Generate a professional full-body studio fashion photograph with Image 1\'s pose and background. '
-                .'Use Image 2 only to guide %s for a %s. Generate a different realistic face. '
-                .'Plain white studio background, full body, standing, relaxed pose.',
-                $studioRef,
-                $heightText,
-                $genderText
-            ),
-            default => sprintf(
-                '%s Generate a professional full-body studio fashion photograph with a realistic generic %s and %s. '
-                .'Use a new anonymous human face — do not copy any user face reference. '
-                .'Plain white studio background, full body, standing, relaxed pose.',
-                $studioRef,
-                $genderText,
-                $heightText
-            ),
-        };
     }
 
     /**
